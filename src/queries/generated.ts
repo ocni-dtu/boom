@@ -5300,9 +5300,22 @@ export type GetStreamsQueryVariables = Exact<{ [key: string]: never }>
 
 export type GetStreamsQuery = {
   __typename?: 'Query'
-  streams?: {
-    __typename?: 'StreamCollection'
-    items?: Array<{ __typename?: 'Stream'; id: string; name: string }> | null
+  activeUser?: {
+    __typename?: 'User'
+    projects: {
+      __typename?: 'ProjectCollection'
+      items: Array<{
+        __typename?: 'Project'
+        id: string
+        name: string
+        description?: string | null
+        models: {
+          __typename?: 'ModelCollection'
+          totalCount: number
+          items: Array<{ __typename?: 'Model'; previewUrl?: string | null }>
+        }
+      }>
+    }
   } | null
 }
 
@@ -5322,10 +5335,19 @@ export type GetUserQuery = {
 
 export const GetStreamsDocument = gql`
   query getStreams {
-    streams {
-      items {
-        id
-        name
+    activeUser {
+      projects {
+        items {
+          id
+          name
+          description
+          models {
+            items {
+              previewUrl
+            }
+            totalCount
+          }
+        }
       }
     }
   }

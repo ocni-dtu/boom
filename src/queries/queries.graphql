@@ -1,9 +1,18 @@
 query getStreams {
-    streams {
+    activeUser {
+      projects {
         items {
-            id
-            name
+          id
+          name
+          description
+          models {
+            items {
+              previewUrl
+            }
+              totalCount
+          }
         }
+      }
     }
 }
 

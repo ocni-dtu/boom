@@ -14,7 +14,7 @@ export const AppRouter = () => (
       <Route path='/auth' element={<AuthPage />} />
       <Route path='/login' element={<LoginPage />} />
       <Route path='/projects' element={<ProjectsPage />} />
-      <Route path='/table' element={<TablePage />} />
+      <Route path='/table/:streamId' element={<TablePage />} />
       <Route path='*' element={<LoginPage />} />
     </Routes>
   </Suspense>
