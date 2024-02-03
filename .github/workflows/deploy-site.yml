@@ -45,6 +45,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_APP_SERVER_URL: ${{ secrets.VITE_APP_SERVER_URL }}
+          VITE_APP_APP_ID: ${{ secrets.VITE_APP_APP_ID }}
+          VITE_APP_APP_SECRET: ${{ secrets.VITE_APP_APP_SECRET }}
 
       - name: Upload artifact for deployment job
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
