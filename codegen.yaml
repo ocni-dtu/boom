@@ -1,0 +1,24 @@
+overwrite: true
+schema: 'https://speckle.xyz/graphql'
+documents: 'src/queries/*.graphql'
+hooks:
+  afterAllFileWrite:
+    - 'prettier --write'
+generates:
+  src/queries/introspection.json:
+    plugins:
+      - introspection
+    config:
+      minify: true
+  src/queries/generated.ts:
+    documents: 'src/queries/*.graphql'
+    plugins:
+      - 'typescript'
+      - 'typescript-resolvers'
+      - 'typescript-operations'
+      - 'typescript-react-apollo'
+    config:
+      withHooks: true
+      withComponent: false
+      withHOC: false
+      federation: true

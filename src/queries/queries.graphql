@@ -1,0 +1,8 @@
+query getStreams {
+    streams {
+        items {
+            id
+            name
+        }
+    }
+}
