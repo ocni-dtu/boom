@@ -2,19 +2,35 @@ import { Button, Card, Group, Image, Text } from '@mantine/core'
 import { Project } from '@queries'
 import { Link } from 'react-router-dom'
 import { Loading } from '../Loading'
+import { useAuth } from '@contexts'
+import { useState } from 'react'
 
 interface StreamCardProps {
-  project? : Pick<Project, 'id' | 'name' | 'description' | 'models'> | null
+  project?: Pick<Project, 'id' | 'name' | 'description' | 'models'> | null
 }
 
 export const ProjectCard = (props: StreamCardProps) => {
+  // @ts-ignore
+  const { token } = useAuth()
   const { project } = props
+  // @ts-ignore
+  const [imageData, setImageData] = useState<string | null>(null)
 
   const previewUrl = project?.models.items[0].previewUrl
+
+  // useEffect(() => {
+  //   if (previewUrl) {
+  //     fetch(previewUrl, { headers: { authorization: `Bearer ${token}` } })
+  //       .then(res => res.text())
+  //       .then(d => setImageData(d))
+  //   }
+  // }, [previewUrl])
 
   if (!project) {
     return <Loading />
   }
+
+  // console.log("Image", imageData)
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
