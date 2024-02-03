@@ -13,6 +13,7 @@ export const AuthContext = React.createContext({
     token: null as string | null,
     refreshToken: null as string | null,
     login: () => { },
+    // @ts-ignore
     exchangeAccessCode: (accessCode: string) => Promise.resolve(),
     logOut: () => { }
 })
