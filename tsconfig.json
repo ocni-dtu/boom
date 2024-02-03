@@ -25,7 +25,8 @@
     "paths": {
       "@components": ["components"],
       "@pages": ["pages"],
-      "@contexts": ["contexts"]
+      "@contexts": ["contexts"],
+      "@queries": ["queries"]
     }
   },
   "include": ["src"],

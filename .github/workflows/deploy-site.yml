@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   
 jobs:
   build:
@@ -75,6 +75,7 @@ jobs:
         with:
           # Upload entire repository
           path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2

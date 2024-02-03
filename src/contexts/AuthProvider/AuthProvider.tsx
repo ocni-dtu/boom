@@ -5,8 +5,8 @@ export const REFRESH_TOKEN = `${APP_NAME}.RefreshToken`
 export const CHALLENGE = `${APP_NAME}.Challenge`
 
 export const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL ?? 'https://speckle.xyz'
-const SPECKLE_APP_ID = import.meta.env.VITE_APP_APP_ID ?? '9397f1dfb2'
-const SPECKLE_APP_SECRET = import.meta.env.VITE_APP_APP_SECRET ?? '94217b3eee'
+const SPECKLE_APP_ID = import.meta.env.VITE_APP_APP_ID ?? ''
+const SPECKLE_APP_SECRET = import.meta.env.VITE_APP_APP_SECRET ?? ''
 
 // Create an auth context
 export const AuthContext = React.createContext({
@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: any) => {
     // Create a login function that redirects to the Speckle server authentication page
     const login = () => {
         // Generate random challenge
-        var challenge =
+        const challenge =
             Math.random()
                 .toString(36)
                 .substring(2, 15) +
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: any) => {
 
     // Create an exchangeAccessCode function that exchanges the provided access code with a token/refreshToken pair, and saves them to local storage.
     const exchangeAccessCode = async (accessCode: string) => {
-        var res = await fetch(`${SERVER_URL}/auth/token/`, {
+        const res = await fetch(`${SERVER_URL}/auth/token/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: any) => {
                 challenge: localStorage.getItem(CHALLENGE)
             })
         })
-        var data = await res.json()
+        const data = await res.json()
 
         if (data.token) {
             // If retrieving the token was successful, remove challenge and set the new token and refresh token

@@ -3,17 +3,13 @@ import { useMemo } from 'react'
 import { ApolloClient, createHttpLink, InMemoryCache, ApolloProvider } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
 
-import { useAuth } from '@contexts'
-
-
-const SPECKLE_SERVER_URL = 'https://speckle.xyz'
+import { SERVER_URL, useAuth } from '@contexts'
 
 export const GraphQlProvider = ({ children }: any) => {
-
   const { token } = useAuth()
 
   const speckleServerLink = createHttpLink({
-    uri: `${SPECKLE_SERVER_URL}/graphql`,
+    uri: `${SERVER_URL}/graphql`,
   })
 
   const authLink = useMemo(() => setContext((_, { headers }) => {
