@@ -5333,6 +5333,31 @@ export type GetUserQuery = {
   } | null
 }
 
+export type GetStreamQueryVariables = Exact<{
+  projectId: Scalars['String']['input']
+}>
+
+export type GetStreamQuery = {
+  __typename?: 'Query'
+  stream?: {
+    __typename?: 'Stream'
+    name: string
+    branches?: {
+      __typename?: 'BranchCollection'
+      totalCount: number
+      cursor?: string | null
+      items?: Array<{
+        __typename?: 'Branch'
+        name: string
+        commits?: {
+          __typename?: 'CommitCollection'
+          items?: Array<{ __typename?: 'Commit'; referencedObject: string }> | null
+        } | null
+      }> | null
+    } | null
+  } | null
+}
+
 export const GetStreamsDocument = gql`
   query getStreams {
     activeUser {
@@ -5433,3 +5458,59 @@ export type GetUserQueryHookResult = ReturnType<typeof useGetUserQuery>
 export type GetUserLazyQueryHookResult = ReturnType<typeof useGetUserLazyQuery>
 export type GetUserSuspenseQueryHookResult = ReturnType<typeof useGetUserSuspenseQuery>
 export type GetUserQueryResult = Apollo.QueryResult<GetUserQuery, GetUserQueryVariables>
+export const GetStreamDocument = gql`
+  query getStream($projectId: String!) {
+    stream(id: $projectId) {
+      name
+      branches {
+        totalCount
+        cursor
+        items {
+          name
+          commits {
+            items {
+              referencedObject
+            }
+          }
+        }
+      }
+    }
+  }
+`
+
+/**
+ * __useGetStreamQuery__
+ *
+ * To run a query within a React component, call `useGetStreamQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetStreamQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetStreamQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useGetStreamQuery(baseOptions: Apollo.QueryHookOptions<GetStreamQuery, GetStreamQueryVariables>) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
+}
+export function useGetStreamLazyQuery(
+  baseOptions?: Apollo.LazyQueryHookOptions<GetStreamQuery, GetStreamQueryVariables>,
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useLazyQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
+}
+export function useGetStreamSuspenseQuery(
+  baseOptions?: Apollo.SuspenseQueryHookOptions<GetStreamQuery, GetStreamQueryVariables>,
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useSuspenseQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
+}
+export type GetStreamQueryHookResult = ReturnType<typeof useGetStreamQuery>
+export type GetStreamLazyQueryHookResult = ReturnType<typeof useGetStreamLazyQuery>
+export type GetStreamSuspenseQueryHookResult = ReturnType<typeof useGetStreamSuspenseQuery>
+export type GetStreamQueryResult = Apollo.QueryResult<GetStreamQuery, GetStreamQueryVariables>

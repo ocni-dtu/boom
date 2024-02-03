@@ -1,6 +1,6 @@
 import { useGetStreamsQuery } from '@queries'
 import { Container, Grid } from '@mantine/core'
-import { ErrorMessage, Loading, ProjectCard } from '@components'
+import { ErrorBoundary, ErrorMessage, Loading, ProjectCard } from '@components'
 
 export const ProjectsPage = () => {
   const { loading, error, data } = useGetStreamsQuery()
@@ -24,10 +24,12 @@ export const ProjectsPage = () => {
     <Grid>
       {data?.activeUser?.projects.items?.map((project, index) => (
         <Grid.Col span={3} key={index}>
-          <ProjectCard
-            // @ts-ignore
-            project={project}
-          />
+          <ErrorBoundary>
+            <ProjectCard
+              // @ts-ignore
+              project={project}
+            />
+          </ErrorBoundary>
         </Grid.Col>
       ))}
     </Grid>

@@ -1,18 +1,18 @@
 query getStreams {
     activeUser {
-      projects {
-        items {
-          id
-          name
-          description
-          models {
+        projects {
             items {
-              previewUrl
+                id
+                name
+                description
+                models {
+                    items {
+                        previewUrl
+                    }
+                    totalCount
+                }
             }
-              totalCount
-          }
         }
-      }
     }
 }
 
@@ -27,7 +27,20 @@ query getUser {
     }
 }
 
-query getProjectData($projectId: String!) {
-
+query getStream($projectId: String!){
+    stream(id: $projectId){
+        name
+        branches {
+            totalCount
+            cursor
+            items {
+                name
+                commits{
+                    items {
+                        referencedObject
+                    }
+                }
+            }
+        }
+    }
 }
-
