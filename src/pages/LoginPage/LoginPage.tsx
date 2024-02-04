@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 export const LoginPage = () => {
   const { token } = useAuth()
   const navigate = useNavigate()
-  const [ value, setValue] = useState<string | null>('')
+  const [value, setValue] = useState<string | null>('')
 
   useEffect(() => {
     if (token) {
@@ -20,7 +20,8 @@ export const LoginPage = () => {
       <Title>BOOM - Bill Of Open Materials</Title>
       <br />
       {/*@ts-ignore*/}
-      <Group><TextInput placeholder='Auth code from Speckle' value={value} onChange={setValue}/><Button onClick={() => navigate(`/auth?${value}`)}>Go</Button></Group>
+      <Group><TextInput placeholder="Auth code from Speckle" value={value} onChange={(e) => setValue(e.target.value)} /><Button
+        onClick={() => navigate(`/auth?${value}`)}>Go</Button></Group>
     </Container>
   )
 }
