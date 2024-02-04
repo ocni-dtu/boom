@@ -1,6 +1,6 @@
 import { AppShell, MantineProvider, rem } from '@mantine/core'
 import { AppRouter, ErrorBoundary, Header, theme } from '@components'
-import '@fontsource/roboto'
+import '@fontsource/outfit'
 import '@mantine/core/styles.css'
 
 export const App = () => (
