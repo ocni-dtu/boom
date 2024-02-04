@@ -8,14 +8,16 @@ export const AvatarBubble = () => {
   const { user } = useUser()
 
   if (!token) {
-    return <UnstyledButton onClick={login} style={{marginRight: 8}}>Login</UnstyledButton>
+    return <UnstyledButton onClick={login} style={{ marginRight: 8 }}>Login</UnstyledButton>
   }
 
   if (!user) {
     return <Loading />
   }
 
+  console.log('NAME', user.name)
   return (
-    <Avatar src={user.avatar} radius="xl" style={{marginRight: 8}} />
+    <Avatar radius="xl" color='indigo'
+            style={{ marginRight: 8 }}>{`${user.name?.split(' ')[0][0]}${user.name?.split(' ')[1][0]}`}</Avatar>
   )
 }

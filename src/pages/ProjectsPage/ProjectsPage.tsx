@@ -21,17 +21,19 @@ export const ProjectsPage = () => {
 
 
   return (
-    <Grid>
-      {data?.activeUser?.projects.items?.map((project, index) => (
-        <Grid.Col span={3} key={index}>
-          <ErrorBoundary>
-            <ProjectCard
-              // @ts-ignore
-              project={project}
-            />
-          </ErrorBoundary>
-        </Grid.Col>
-      ))}
-    </Grid>
+    <Container>
+      <Grid>
+        {data?.activeUser?.projects?.items?.map((project, index) => (
+          <Grid.Col span={4} key={index}>
+            <ErrorBoundary>
+              <ProjectCard
+                // @ts-ignore
+                project={project}
+              />
+            </ErrorBoundary>
+          </Grid.Col>
+        ))}
+      </Grid>
+    </Container>
   )
 }

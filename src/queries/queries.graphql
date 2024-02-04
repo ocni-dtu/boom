@@ -31,8 +31,6 @@ query getStream($projectId: String!){
     stream(id: $projectId){
         name
         branches {
-            totalCount
-            cursor
             items {
                 name
                 commits{

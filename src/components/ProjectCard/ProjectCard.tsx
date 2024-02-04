@@ -50,7 +50,7 @@ export const ProjectCard = (props: StreamCardProps) => {
         {project.description}
       </Text>
 
-      <Button mt="md" radius="md">
+      <Button mt="md" radius="md" variant='outline'>
         <Link to={`/table/${project.id}`}>
           Open Table View
         </Link>

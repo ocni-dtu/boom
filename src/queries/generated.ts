@@ -5344,8 +5344,6 @@ export type GetStreamQuery = {
     name: string
     branches?: {
       __typename?: 'BranchCollection'
-      totalCount: number
-      cursor?: string | null
       items?: Array<{
         __typename?: 'Branch'
         name: string
@@ -5463,8 +5461,6 @@ export const GetStreamDocument = gql`
     stream(id: $projectId) {
       name
       branches {
-        totalCount
-        cursor
         items {
           name
           commits {
