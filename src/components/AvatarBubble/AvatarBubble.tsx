@@ -15,9 +15,8 @@ export const AvatarBubble = () => {
     return <Loading />
   }
 
-  console.log('NAME', user.name)
   return (
-    <Avatar radius="xl" color='indigo'
+    <Avatar radius="xl" color='black'
             style={{ marginRight: 8 }}>{`${user.name?.split(' ')[0][0]}${user.name?.split(' ')[1][0]}`}</Avatar>
   )
 }

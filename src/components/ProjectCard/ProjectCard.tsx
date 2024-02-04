@@ -1,6 +1,6 @@
 import { Button, Card, Group, Image, Text } from '@mantine/core'
 import { Project } from '@queries'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Loading } from '../Loading'
 import { useAuth } from '@contexts'
 import { useState } from 'react'
@@ -12,6 +12,7 @@ interface StreamCardProps {
 export const ProjectCard = (props: StreamCardProps) => {
   // @ts-ignore
   const { token } = useAuth()
+  const navigate = useNavigate()
   const { project } = props
   // @ts-ignore
   const [imageData, setImageData] = useState<string | null>(null)
@@ -50,10 +51,8 @@ export const ProjectCard = (props: StreamCardProps) => {
         {project.description}
       </Text>
 
-      <Button mt="md" radius="md" variant='outline'>
-        <Link to={`/table/${project.id}`}>
-          Open Table View
-        </Link>
+      <Button mt="md" radius="md" variant="filled" onClick={() => navigate(`/table/${project.id}`)}>
+        Open Table View
       </Button>
     </Card>
   )

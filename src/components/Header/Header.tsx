@@ -7,9 +7,9 @@ export const Header = () => {
   const navigate = useNavigate()
 
   return (
-    <header style={{ paddingLeft: 5, backgroundColor: theme.colors.light[1] }}>
+    <header style={{ paddingLeft: 5, backgroundColor: theme.colors.yellow[3] }}>
       <Group justify="space-between">
-        <UnstyledButton onClick={() => navigate('/')}><Title order={1}>BOOM</Title></UnstyledButton>
+        <UnstyledButton onClick={() => navigate('/')}><Title order={1}>boom</Title></UnstyledButton>
         <AvatarBubble />
       </Group>
     </header>

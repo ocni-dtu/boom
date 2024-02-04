@@ -1,9 +1,9 @@
 import { createTheme, rem } from '@mantine/core'
 
 export const theme = createTheme({
-  fontFamily: 'Roboto, sans-serif',
+  fontFamily: 'Outfit, sans-serif',
   headings: {
-    fontFamily: 'Roboto, sans-serif',
+    fontFamily: 'Outfit, sans-serif',
     fontWeight: '700',
   },
   fontSizes: {
@@ -22,7 +22,21 @@ export const theme = createTheme({
     xxl: '120em',
   },
   black: '#2e2e2e',
+  primaryColor: 'yellow',
+  primaryShade: 3,
   colors: {
+    yellow: [
+      '#fff9e2',
+      '#fcf1d0',
+      '#f6e3a3',
+      '#F2d579',
+      '#edc549',
+      '#ebbd2e',
+      '#e9b91f',
+      '#cfa210',
+      '#b99005',
+      '#9f7c00',
+    ],
     light: [
       '#fbf3f5',
       '#e8e8e8',

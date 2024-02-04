@@ -11,7 +11,7 @@
     "codegen": "graphql-codegen --config codegen.yaml"
   },
   "dependencies": {
-    "@fontsource/roboto": "^5.0.8",
+    "@fontsource/outfit": "^5.0.8",
     "@mantine/core": "^7.3.2",
     "@mantine/hooks": "^7.3.2",
     "@speckle/objectloader": "^2.17.16",
