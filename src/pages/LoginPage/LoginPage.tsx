@@ -20,7 +20,7 @@ export const LoginPage = () => {
       <Title>BOOM - Bill Of Open Materials</Title>
       <br />
       {/*@ts-ignore*/}
-      <Group><TextInput placeholder='Auth code from Speckle' value={value} setValue={setValue}/><Button onClick={() => navigate(`/auth?${value}`)}>Go</Button></Group>
+      <Group><TextInput placeholder='Auth code from Speckle' value={value} onChange={setValue}/><Button onClick={() => navigate(`/auth?${value}`)}>Go</Button></Group>
     </Container>
   )
 }
