@@ -29,9 +29,9 @@ to be configured on the server. The application will use the `http://localhost:8
 configure the application with this URL.
 
 This template uses the main [Speckle Server](https://speckle.xyz) by default. To use a different server, you can change
-the `VITE_APP_SERVER_URL` environment variable in the `.env` file.
+the `VITE_SPECKLE_SERVER_URL` environment variable in the `.env` file.
 
-To use your own Application, you can change the `VITE_APP_APP_ID` and `VITE_APP_APP_SECRET` environment variables in
+To use your own Application, you can change the `VITE_SPECKLE_APP_ID` and `VITE_SPECKLE_APP_SECRET` environment variables in
 the `.env` file. You will have to configure the Speckle Application redirect URL to `http(s)://<your-app-url>/auth`.
 
 ## Application Structure

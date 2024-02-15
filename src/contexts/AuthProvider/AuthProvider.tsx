@@ -4,9 +4,9 @@ export const TOKEN = `${APP_NAME}.AuthToken`
 export const REFRESH_TOKEN = `${APP_NAME}.RefreshToken`
 export const CHALLENGE = `${APP_NAME}.Challenge`
 
-export const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL ?? 'https://speckle.xyz'
-const SPECKLE_APP_ID = import.meta.env.VITE_APP_APP_ID ?? ''
-const SPECKLE_APP_SECRET = import.meta.env.VITE_APP_APP_SECRET ?? ''
+export const SERVER_URL = import.meta.env.VITE_SPECKLE_SERVER_URL ?? 'https://speckle.xyz'
+const SPECKLE_APP_ID = import.meta.env.VITE_SPECKLE_APP_ID ?? ''
+const SPECKLE_APP_SECRET = import.meta.env.VITE_SPECKLE_APP_SECRET ?? ''
 
 // Create an auth context
 export const AuthContext = React.createContext({
