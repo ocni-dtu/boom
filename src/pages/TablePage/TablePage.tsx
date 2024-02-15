@@ -5,7 +5,6 @@ import { BranchTabs } from '../../components/BranchTabs'
 import { useGetStreamQuery } from '@queries'
 import { useState } from 'react'
 
-
 export const TablePage = () => {
   const { projectId } = useParams()
   const { loading: streamLoading, data: streamData } = useGetStreamQuery({
@@ -24,13 +23,20 @@ export const TablePage = () => {
 
   return (
     <Container>
-      <Group><Title>{streamData?.stream?.name}</Title><Button>Calculate GWP</Button></Group>
-      {/*@ts-ignore*/}
+      <Group>
+        <Title>{streamData?.stream?.name}</Title>
+        <Button>Calculate GWP</Button>
+      </Group>
+      {/*@ts-expect-error temporary implementation*/}
       <BranchTabs branches={streamData?.stream?.branches?.items} setSelectedObjectId={setSelectedObjectId} />
-      {projectId && selectedObjectId ?
-        <iframe src={`https://speckle.xyz/embed?stream=${projectId}&commit=${selectedObjectId}&autoload=true&transparent=true`}
-                width="900" height="400"
-                frameBorder="0"></iframe> : null}
+      {projectId && selectedObjectId ? (
+        <iframe
+          src={`https://speckle.xyz/embed?stream=${projectId}&commit=${selectedObjectId}&autoload=true&transparent=true`}
+          width='900'
+          height='400'
+          frameBorder='0'
+        ></iframe>
+      ) : null}
       <ProjectTable projectId={projectId} objectId={selectedObjectId} loading={streamLoading || !selectedObjectId} />
     </Container>
   )

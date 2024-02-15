@@ -8,20 +8,18 @@ interface BranchTabsProps {
 }
 
 export const BranchTabs = (props: BranchTabsProps) => {
-  const { branches, setSelectedObjectId} = props
+  const { branches, setSelectedObjectId } = props
   const [activeTab, setActiveTab] = useState<string | null>(null)
 
   const handleChange = (value: string | null) => {
     setActiveTab(value)
-    // @ts-ignore
-    setSelectedObjectId(branches?.find(branch => branch.name === value)?.commits?.items[0].referencedObject)
+    // @ts-expect-error temporary implementation
+    setSelectedObjectId(branches?.find((branch) => branch.name === value)?.commits?.items[0].referencedObject)
   }
 
   return (
     <Tabs value={activeTab} onChange={handleChange}>
-      <Tabs.List>
-        {branches?.map(branch => <Tabs.Tab value={branch.name}>{branch.name}</Tabs.Tab>)}
-      </Tabs.List>
+      <Tabs.List>{branches?.map((branch) => <Tabs.Tab value={branch.name}>{branch.name}</Tabs.Tab>)}</Tabs.List>
     </Tabs>
   )
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, ReactNode, useContext, useMemo } from 'react'
 import { useGetUserQuery, User } from '@queries'
 
 interface UserContextProps {
@@ -7,7 +7,11 @@ interface UserContextProps {
 
 export const UserContext = createContext({ user: null } as UserContextProps)
 
-export const UserProvider = ({ children }: any) => {
+type UserProviderProps = {
+  children: ReactNode
+}
+
+export const UserProvider = ({ children }: UserProviderProps) => {
   const { loading, error, data } = useGetUserQuery()
 
   const user = useMemo(() => {
@@ -18,13 +22,14 @@ export const UserProvider = ({ children }: any) => {
   }, [loading, error, data])
 
   return (
-    <UserContext.Provider value={{
-      user: user,
-    }}>
+    <UserContext.Provider
+      value={{
+        user: user,
+      }}
+    >
       {children}
     </UserContext.Provider>
   )
 }
-
 
 export const useUser = () => useContext(UserContext)

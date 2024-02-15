@@ -14,11 +14,12 @@ export const ProjectsPage = () => {
   }
 
   if (error) {
-    return (<Container>
-      <ErrorMessage error={error} />
-    </Container>)
+    return (
+      <Container>
+        <ErrorMessage error={error} />
+      </Container>
+    )
   }
-
 
   return (
     <Container>
@@ -27,7 +28,7 @@ export const ProjectsPage = () => {
           <Grid.Col span={4} key={index}>
             <ErrorBoundary>
               <ProjectCard
-                // @ts-ignore
+                // @ts-expect-error temporary implementation
                 project={project}
               />
             </ErrorBoundary>

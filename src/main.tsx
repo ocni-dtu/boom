@@ -10,8 +10,7 @@ root.render(
     <ErrorBoundary>
       <AuthProvider>
         <BrowserRouter>
-          <GraphQlProvider
-          >
+          <GraphQlProvider>
             <UserProvider>
               <App />
             </UserProvider>
