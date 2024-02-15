@@ -8,8 +8,10 @@ export const Header = () => {
 
   return (
     <header style={{ paddingLeft: 5, backgroundColor: theme.colors.yellow[3] }}>
-      <Group justify="space-between">
-        <UnstyledButton onClick={() => navigate('/')}><Title order={1}>boom</Title></UnstyledButton>
+      <Group justify='space-between'>
+        <UnstyledButton onClick={() => navigate('/')}>
+          <Title order={1}>boom</Title>
+        </UnstyledButton>
         <AvatarBubble />
       </Group>
     </header>

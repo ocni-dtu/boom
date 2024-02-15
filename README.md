@@ -3,7 +3,7 @@ Bill Of Open Materials - A quantity take-off app for Speckle
 
 ![Boom Speckle](./public/boom-speckle.gif)
 
-Quantity take-offs is a intermediate step between your BIM model and analyses like LCA and cost calculations.\
+Quantity take-offs is an intermediate step between your BIM model and analyses like LCA and cost calculations.\
 Instead of doing your schedules in Revit, you can use boom to create quantity take-offs directly from Speckle.
 
 ## Getting Started
