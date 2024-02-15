@@ -29,6 +29,6 @@
       "@queries": ["queries"]
     }
   },
-  "include": ["src"],
+  "include": ["src/**/*.{ts|tsx}"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

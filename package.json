@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "vite --port 8000",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "codegen": "graphql-codegen --config codegen.yaml"
+    "codegen": "graphql-codegen --config codegen.yaml",
+    "lint": "eslint src/**/*.{tsx,ts}",
+    "lint:fix": "eslint --fix src/**/*.{tsx,ts}",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "format:fix": "prettier --write \"**/*.{ts,tsx}\"",
+    "tsc": "tsc --noEmit",
+    "check": "npm run format && npm run lint && npm run tsc",
+    "fix": "npm run lint:fix && npm run format:fix"
   },
   "dependencies": {
     "@fontsource/outfit": "^5.0.8",
