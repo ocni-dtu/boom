@@ -44,7 +44,7 @@ jobs:
         run: npm ci
 
       - name: NPM Install
-        run: npm check
+        run: npm run check
 
       - name: Build
         run: npm run build

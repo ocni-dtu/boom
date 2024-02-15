@@ -13,14 +13,18 @@ interface AuthContextInterface {
   token: string | null
   refreshToken: string | null
   login: () => void
-  exchangeAccessCode: (accessCode: string) => void
+  exchangeAccessCode(accessCode: string): Promise<void>
   logOut: () => void
 }
 
 export const AuthContext = React.createContext({} as AuthContextInterface)
 
+type AuthProviderProps = {
+  children: ReactNode
+}
+
 // Create an auth provider
-export const AuthProvider = (children: ReactNode) => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Get the token and refreshToken from localStorage
   const [token, setToken] = React.useState(localStorage.getItem(TOKEN))
   const [refreshToken, setRefreshToken] = React.useState(localStorage.getItem(REFRESH_TOKEN))

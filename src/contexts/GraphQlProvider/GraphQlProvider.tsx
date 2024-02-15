@@ -5,7 +5,11 @@ import { setContext } from '@apollo/client/link/context'
 
 import { SERVER_URL, useAuth } from '@contexts'
 
-export const GraphQlProvider = (children: ReactNode) => {
+type GraphQlProviderProps = {
+  children: ReactNode
+}
+
+export const GraphQlProvider = ({ children }: GraphQlProviderProps) => {
   const { token } = useAuth()
 
   const speckleServerLink = createHttpLink({

@@ -7,7 +7,11 @@ interface UserContextProps {
 
 export const UserContext = createContext({ user: null } as UserContextProps)
 
-export const UserProvider = (children: ReactNode) => {
+type UserProviderProps = {
+  children: ReactNode
+}
+
+export const UserProvider = ({ children }: UserProviderProps) => {
   const { loading, error, data } = useGetUserQuery()
 
   const user = useMemo(() => {
