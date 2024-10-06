@@ -49,9 +49,11 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SPECKLE_SERVER_URL: ${{ vars.VITE_APP_SERVER_URL }}
-          VITE_SPECKLE_APP_ID: ${{ secrets.VITE_APP_APP_ID }}
-          VITE_SPECKLE_APP_SECRET: ${{ secrets.VITE_APP_APP_SECRET }}
+          VITE_SPECKLE_SERVER_URL: ${{ vars.SPECKLE_SERVER_URL }}
+          VITE_SPECKLE_APP_ID: ${{ secrets.SPECKLE_APP_ID }}
+          VITE_SPECKLE_APP_SECRET: ${{ secrets.SPECKLE_APP_SECRET }}
+          VITE_APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+          VITE_UMAMI_ID: ${{ vars.UMAMI_ID }}
 
       - name: Upload artifact for deployment job
         if: github.event_name != 'pull_request'
