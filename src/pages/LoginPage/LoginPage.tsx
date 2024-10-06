@@ -1,7 +1,8 @@
-import { Button, Card, Container, Image, rem, Stack, Text, Title } from '@mantine/core'
+import { Button, Card, Container, rem, Stack, Text, Title } from '@mantine/core'
 import { useAuth } from '@contexts'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import videoSource from '/boom.webm'
 
 export const LoginPage = () => {
   const { token, login } = useAuth()
@@ -16,14 +17,14 @@ export const LoginPage = () => {
   return (
     <Container>
       <Stack align='center'>
-        <Title style={{ fontSize: rem(48) }}>BOOM 💥</Title>
+        <Title style={{ fontSize: rem(48) }}>BoOM 💥</Title>
         <Title order={2}>
           <Text component='span' inherit style={{ textDecoration: 'underline' }}>
             B
           </Text>
           ill{' '}
           <Text component='span' inherit style={{ textDecoration: 'underline' }}>
-            O
+            o
           </Text>
           f{' '}
           <Text component='span' inherit style={{ textDecoration: 'underline' }}>
@@ -39,7 +40,9 @@ export const LoginPage = () => {
       <br />
       <Card shadow='sm' padding='lg' radius='md' withBorder>
         <Card.Section>
-          <Image src='/boom-speckle.gif' height={500} alt='boom' />
+          <video controls width='100%' autoPlay>
+            <source src={videoSource} type='video/webm' />
+          </video>
         </Card.Section>
 
         <Text my='md'>

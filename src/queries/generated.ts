@@ -8,6 +8,7 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> }
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never }
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never }
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> }
 const defaultOptions = {} as const
 /** All built-in and custom scalars, mapped to their actual values */
@@ -21,7 +22,6 @@ export type Scalars = {
   BigInt: { input: any; output: any }
   /** A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar. */
   DateTime: { input: any; output: any }
-  EmailAddress: { input: any; output: any }
   /** The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSONObject: { input: any; output: any }
   _FieldSet: { input: any; output: any }
@@ -29,6 +29,7 @@ export type Scalars = {
 
 export type ActiveUserMutations = {
   __typename?: 'ActiveUserMutations'
+  emailMutations: UserEmailMutations
   /** Mark onboarding as complete */
   finishOnboarding: Scalars['Boolean']['output']
   /** Edit a user's profile */
@@ -55,8 +56,13 @@ export type Activity = {
 export type ActivityCollection = {
   __typename?: 'ActivityCollection'
   cursor?: Maybe<Scalars['String']['output']>
-  items?: Maybe<Array<Maybe<Activity>>>
+  items: Array<Activity>
   totalCount: Scalars['Int']['output']
+}
+
+export type AddDomainToWorkspaceInput = {
+  domain: Scalars['String']['input']
+  workspaceId: Scalars['ID']['input']
 }
 
 export type AdminInviteList = {
@@ -72,6 +78,7 @@ export type AdminQueries = {
   projectList: ProjectCollection
   serverStatistics: ServerStatistics
   userList: AdminUserList
+  workspaceList: WorkspaceCollection
 }
 
 export type AdminQueriesInviteListArgs = {
@@ -93,6 +100,12 @@ export type AdminQueriesUserListArgs = {
   limit?: Scalars['Int']['input']
   query?: InputMaybe<Scalars['String']['input']>
   role?: InputMaybe<ServerRole>
+}
+
+export type AdminQueriesWorkspaceListArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  limit?: Scalars['Int']['input']
+  query?: InputMaybe<Scalars['String']['input']>
 }
 
 export type AdminUserList = {
@@ -164,6 +177,14 @@ export type AppCreateInput = {
   termsAndConditionsLink?: InputMaybe<Scalars['String']['input']>
 }
 
+export type AppTokenCreateInput = {
+  lifespan?: InputMaybe<Scalars['BigInt']['input']>
+  /** Optionally limit the token to only have access to specific resources */
+  limitResources?: InputMaybe<Array<TokenResourceIdentifierInput>>
+  name: Scalars['String']['input']
+  scopes: Array<Scalars['String']['input']>
+}
+
 export type AppUpdateInput = {
   description: Scalars['String']['input']
   id: Scalars['String']['input']
@@ -184,94 +205,223 @@ export type AuthStrategy = {
   url: Scalars['String']['output']
 }
 
-export type AutomationCreateInput = {
-  automationId: Scalars['String']['input']
-  automationName: Scalars['String']['input']
-  automationRevisionId: Scalars['String']['input']
-  modelId: Scalars['String']['input']
-  projectId: Scalars['String']['input']
-  webhookId?: InputMaybe<Scalars['String']['input']>
+export type AutomateAuthCodePayloadTest = {
+  action: Scalars['String']['input']
+  code: Scalars['String']['input']
+  userId: Scalars['String']['input']
 }
 
-export type AutomationFunctionRun = {
-  __typename?: 'AutomationFunctionRun'
-  contextView?: Maybe<Scalars['String']['output']>
-  elapsed: Scalars['Float']['output']
-  functionId: Scalars['String']['output']
-  functionLogo?: Maybe<Scalars['String']['output']>
-  functionName: Scalars['String']['output']
+export type AutomateFunction = {
+  __typename?: 'AutomateFunction'
+  automationCount: Scalars['Int']['output']
+  /** Only returned if user is a part of this speckle server */
+  creator?: Maybe<LimitedUser>
+  description: Scalars['String']['output']
   id: Scalars['ID']['output']
-  resultVersions: Array<Version>
-  /**
-   * NOTE: this is the schema for the results field below!
-   * Current schema: {
-   *   version: "1.0.0",
-   *   values: {
-   *     objectResults: Record<str, {
-   *       category: string
-   *       level: ObjectResultLevel
-   *       objectIds: string[]
-   *       message: str | null
-   *       metadata: Records<str, unknown> | null
-   *       visualoverrides: Records<str, unknown> | null
-   *     }[]>
-   *     blobIds?: string[]
-   *   }
-   * }
-   */
-  results?: Maybe<Scalars['JSONObject']['output']>
-  status: AutomationRunStatus
-  statusMessage?: Maybe<Scalars['String']['output']>
+  isFeatured: Scalars['Boolean']['output']
+  logo?: Maybe<Scalars['String']['output']>
+  name: Scalars['String']['output']
+  releases: AutomateFunctionReleaseCollection
+  repo: BasicGitRepositoryMetadata
+  /** SourceAppNames values from @speckle/shared. Empty array means - all of them */
+  supportedSourceApps: Array<Scalars['String']['output']>
+  tags: Array<Scalars['String']['output']>
 }
 
-export type AutomationMutations = {
-  __typename?: 'AutomationMutations'
-  create: Scalars['Boolean']['output']
-  functionRunStatusReport: Scalars['Boolean']['output']
+export type AutomateFunctionReleasesArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<AutomateFunctionReleasesFilter>
+  limit?: InputMaybe<Scalars['Int']['input']>
 }
 
-export type AutomationMutationsCreateArgs = {
-  input: AutomationCreateInput
+export type AutomateFunctionCollection = {
+  __typename?: 'AutomateFunctionCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<AutomateFunction>
+  totalCount: Scalars['Int']['output']
 }
 
-export type AutomationMutationsFunctionRunStatusReportArgs = {
-  input: AutomationRunStatusUpdateInput
-}
-
-export type AutomationRun = {
-  __typename?: 'AutomationRun'
-  automationId: Scalars['String']['output']
-  automationName: Scalars['String']['output']
+export type AutomateFunctionRelease = {
+  __typename?: 'AutomateFunctionRelease'
+  commitId: Scalars['String']['output']
   createdAt: Scalars['DateTime']['output']
-  functionRuns: Array<AutomationFunctionRun>
+  function: AutomateFunction
+  functionId: Scalars['String']['output']
   id: Scalars['ID']['output']
-  /** Resolved from all function run statuses */
-  status: AutomationRunStatus
-  updatedAt: Scalars['DateTime']['output']
-  versionId: Scalars['String']['output']
+  inputSchema?: Maybe<Scalars['JSONObject']['output']>
+  versionTag: Scalars['String']['output']
 }
 
-export enum AutomationRunStatus {
+export type AutomateFunctionReleaseCollection = {
+  __typename?: 'AutomateFunctionReleaseCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<AutomateFunctionRelease>
+  totalCount: Scalars['Int']['output']
+}
+
+export type AutomateFunctionReleasesFilter = {
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
+export type AutomateFunctionRun = {
+  __typename?: 'AutomateFunctionRun'
+  contextView?: Maybe<Scalars['String']['output']>
+  createdAt: Scalars['DateTime']['output']
+  elapsed: Scalars['Float']['output']
+  /** Nullable, in case the function is not retrievable due to poor network conditions */
+  function?: Maybe<AutomateFunction>
+  functionId?: Maybe<Scalars['String']['output']>
+  functionReleaseId?: Maybe<Scalars['String']['output']>
+  id: Scalars['ID']['output']
+  /** AutomateTypes.ResultsSchema type from @speckle/shared */
+  results?: Maybe<Scalars['JSONObject']['output']>
+  status: AutomateRunStatus
+  statusMessage?: Maybe<Scalars['String']['output']>
+  updatedAt: Scalars['DateTime']['output']
+}
+
+export type AutomateFunctionRunStatusReportInput = {
+  contextView?: InputMaybe<Scalars['String']['input']>
+  functionRunId: Scalars['String']['input']
+  /** AutomateTypes.ResultsSchema type from @speckle/shared */
+  results?: InputMaybe<Scalars['JSONObject']['input']>
+  status: AutomateRunStatus
+  statusMessage?: InputMaybe<Scalars['String']['input']>
+}
+
+export type AutomateFunctionTemplate = {
+  __typename?: 'AutomateFunctionTemplate'
+  id: AutomateFunctionTemplateLanguage
+  logo: Scalars['String']['output']
+  title: Scalars['String']['output']
+  url: Scalars['String']['output']
+}
+
+export enum AutomateFunctionTemplateLanguage {
+  DotNet = 'DOT_NET',
+  Python = 'PYTHON',
+  Typescript = 'TYPESCRIPT',
+}
+
+export type AutomateFunctionsFilter = {
+  featuredFunctionsOnly?: InputMaybe<Scalars['Boolean']['input']>
+  /** By default we skip functions without releases. Set this to true to include them. */
+  functionsWithoutReleases?: InputMaybe<Scalars['Boolean']['input']>
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
+export type AutomateMutations = {
+  __typename?: 'AutomateMutations'
+  createFunction: AutomateFunction
+  updateFunction: AutomateFunction
+}
+
+export type AutomateMutationsCreateFunctionArgs = {
+  input: CreateAutomateFunctionInput
+}
+
+export type AutomateMutationsUpdateFunctionArgs = {
+  input: UpdateAutomateFunctionInput
+}
+
+export type AutomateRun = {
+  __typename?: 'AutomateRun'
+  automation: Automation
+  automationId: Scalars['String']['output']
+  createdAt: Scalars['DateTime']['output']
+  functionRuns: Array<AutomateFunctionRun>
+  id: Scalars['ID']['output']
+  status: AutomateRunStatus
+  trigger: AutomationRunTrigger
+  updatedAt: Scalars['DateTime']['output']
+}
+
+export type AutomateRunCollection = {
+  __typename?: 'AutomateRunCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<AutomateRun>
+  totalCount: Scalars['Int']['output']
+}
+
+export enum AutomateRunStatus {
+  Canceled = 'CANCELED',
+  Exception = 'EXCEPTION',
   Failed = 'FAILED',
   Initializing = 'INITIALIZING',
+  Pending = 'PENDING',
   Running = 'RUNNING',
   Succeeded = 'SUCCEEDED',
+  Timeout = 'TIMEOUT',
 }
 
-export type AutomationRunStatusUpdateInput = {
-  automationId: Scalars['String']['input']
-  automationRevisionId: Scalars['String']['input']
-  automationRunId: Scalars['String']['input']
-  functionRuns: Array<FunctionRunStatusInput>
-  versionId: Scalars['String']['input']
+export enum AutomateRunTriggerType {
+  VersionCreated = 'VERSION_CREATED',
 }
 
-export type AutomationsStatus = {
-  __typename?: 'AutomationsStatus'
-  automationRuns: Array<AutomationRun>
+export type Automation = {
+  __typename?: 'Automation'
+  createdAt: Scalars['DateTime']['output']
+  /** Only accessible to automation owners */
+  creationPublicKeys: Array<Scalars['String']['output']>
+  currentRevision?: Maybe<AutomationRevision>
+  enabled: Scalars['Boolean']['output']
   id: Scalars['ID']['output']
-  status: AutomationRunStatus
-  statusMessage?: Maybe<Scalars['String']['output']>
+  isTestAutomation: Scalars['Boolean']['output']
+  name: Scalars['String']['output']
+  runs: AutomateRunCollection
+  updatedAt: Scalars['DateTime']['output']
+}
+
+export type AutomationRunsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  limit?: InputMaybe<Scalars['Int']['input']>
+}
+
+export type AutomationCollection = {
+  __typename?: 'AutomationCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<Automation>
+  totalCount: Scalars['Int']['output']
+}
+
+export type AutomationRevision = {
+  __typename?: 'AutomationRevision'
+  functions: Array<AutomationRevisionFunction>
+  id: Scalars['ID']['output']
+  triggerDefinitions: Array<AutomationRevisionTriggerDefinition>
+}
+
+export type AutomationRevisionCreateFunctionInput = {
+  functionId: Scalars['String']['input']
+  functionReleaseId: Scalars['String']['input']
+  /** Should be encrypted from the client side */
+  parameters?: InputMaybe<Scalars['String']['input']>
+}
+
+export type AutomationRevisionFunction = {
+  __typename?: 'AutomationRevisionFunction'
+  /** The secrets in parameters are redacted with six asterisks - ****** */
+  parameters?: Maybe<Scalars['JSONObject']['output']>
+  release: AutomateFunctionRelease
+}
+
+export type AutomationRevisionTriggerDefinition = VersionCreatedTriggerDefinition
+
+export type AutomationRunTrigger = VersionCreatedTrigger
+
+export type AvatarUser = {
+  __typename?: 'AvatarUser'
+  avatar?: Maybe<Scalars['String']['output']>
+  id: Scalars['ID']['output']
+  name: Scalars['String']['output']
+}
+
+export type BasicGitRepositoryMetadata = {
+  __typename?: 'BasicGitRepositoryMetadata'
+  id: Scalars['ID']['output']
+  name: Scalars['String']['output']
+  owner: Scalars['String']['output']
+  url: Scalars['String']['output']
 }
 
 export type BlobMetadata = {
@@ -298,7 +448,10 @@ export type BlobMetadataCollection = {
 
 export type Branch = {
   __typename?: 'Branch'
-  /** All the recent activity on this branch in chronological order */
+  /**
+   * All the recent activity on this branch in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   activity?: Maybe<ActivityCollection>
   author?: Maybe<User>
   commits?: Maybe<CommitCollection>
@@ -504,7 +657,10 @@ export type CommentThreadActivityMessage = {
 
 export type Commit = {
   __typename?: 'Commit'
-  /** All the recent activity on this commit in chronological order */
+  /**
+   * All the recent activity on this commit in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   activity?: Maybe<ActivityCollection>
   authorAvatar?: Maybe<Scalars['String']['output']>
   authorId?: Maybe<Scalars['String']['output']>
@@ -520,6 +676,7 @@ export type Commit = {
    *     ...
    *   }
    * ```
+   * @deprecated Part of the old API surface and will be removed in the future.
    */
   commentCount: Scalars['Int']['output']
   createdAt?: Maybe<Scalars['DateTime']['output']>
@@ -594,6 +751,28 @@ export type CommitsMoveInput = {
   targetBranch: Scalars['String']['input']
 }
 
+/**
+ * Can be used instead of a full item collection, when the implementation doesn't call for it yet. Because
+ * of the structure, it can be swapped out to a full item collection in the future
+ */
+export type CountOnlyCollection = {
+  __typename?: 'CountOnlyCollection'
+  totalCount: Scalars['Int']['output']
+}
+
+export type CreateAutomateFunctionInput = {
+  description: Scalars['String']['input']
+  /** Base64 encoded image data string */
+  logo?: InputMaybe<Scalars['String']['input']>
+  name: Scalars['String']['input']
+  /** GitHub organization to create the repository in */
+  org?: InputMaybe<Scalars['String']['input']>
+  /** SourceAppNames values from @speckle/shared */
+  supportedSourceApps: Array<Scalars['String']['input']>
+  tags: Array<Scalars['String']['input']>
+  template: AutomateFunctionTemplateLanguage
+}
+
 export type CreateCommentInput = {
   content: CommentContentInput
   projectId: Scalars['String']['input']
@@ -618,9 +797,33 @@ export type CreateModelInput = {
   projectId: Scalars['ID']['input']
 }
 
+export type CreateUserEmailInput = {
+  email: Scalars['String']['input']
+}
+
+export type CreateVersionInput = {
+  message?: InputMaybe<Scalars['String']['input']>
+  modelId: Scalars['String']['input']
+  objectId: Scalars['String']['input']
+  parents?: InputMaybe<Array<Scalars['String']['input']>>
+  projectId: Scalars['String']['input']
+  sourceApplication?: InputMaybe<Scalars['String']['input']>
+  totalChildrenCount?: InputMaybe<Scalars['Int']['input']>
+}
+
+export enum Currency {
+  Eur = 'EUR',
+  Gbp = 'GBP',
+  Usd = 'USD',
+}
+
 export type DeleteModelInput = {
   id: Scalars['ID']['input']
   projectId: Scalars['ID']['input']
+}
+
+export type DeleteUserEmailInput = {
+  id: Scalars['ID']['input']
 }
 
 export type DeleteVersionsInput = {
@@ -637,9 +840,22 @@ export type DiscoverableStreamsSortingInput = {
   type: DiscoverableStreamsSortType
 }
 
+export type DiscoverableWorkspace = {
+  __typename?: 'DiscoverableWorkspace'
+  defaultLogoIndex: Scalars['Int']['output']
+  description?: Maybe<Scalars['String']['output']>
+  id: Scalars['ID']['output']
+  logo?: Maybe<Scalars['String']['output']>
+  name: Scalars['String']['output']
+}
+
 export type EditCommentInput = {
   commentId: Scalars['String']['input']
   content: CommentContentInput
+}
+
+export type EmailVerificationRequestInput = {
+  id: Scalars['ID']['input']
 }
 
 export type FileUpload = {
@@ -671,25 +887,43 @@ export type FileUpload = {
   userId: Scalars['String']['output']
 }
 
-export type FunctionRunStatusInput = {
-  contextView?: InputMaybe<Scalars['String']['input']>
-  elapsed: Scalars['Float']['input']
-  functionId: Scalars['String']['input']
-  functionLogo?: InputMaybe<Scalars['String']['input']>
-  functionName: Scalars['String']['input']
-  resultVersionIds: Array<Scalars['String']['input']>
-  /**
-   * Current schema: {
-   *   version: "1.0.0",
-   *   values: {
-   *     speckleObjects: Record<ObjectId, {level: string; statusMessage: string}[]>
-   *     blobIds?: string[]
-   *   }
-   * }
-   */
-  results?: InputMaybe<Scalars['JSONObject']['input']>
-  status: AutomationRunStatus
-  statusMessage?: InputMaybe<Scalars['String']['input']>
+export type GendoAiRender = {
+  __typename?: 'GendoAIRender'
+  camera?: Maybe<Scalars['JSONObject']['output']>
+  createdAt: Scalars['String']['output']
+  gendoGenerationId?: Maybe<Scalars['String']['output']>
+  id: Scalars['ID']['output']
+  modelId: Scalars['String']['output']
+  projectId: Scalars['String']['output']
+  prompt: Scalars['String']['output']
+  /** This is a blob id. */
+  responseImage?: Maybe<Scalars['String']['output']>
+  status: Scalars['String']['output']
+  updatedAt: Scalars['String']['output']
+  user?: Maybe<AvatarUser>
+  userId: Scalars['String']['output']
+  versionId: Scalars['String']['output']
+}
+
+export type GendoAiRenderCollection = {
+  __typename?: 'GendoAIRenderCollection'
+  items: Array<Maybe<GendoAiRender>>
+  totalCount: Scalars['Int']['output']
+}
+
+export type GendoAiRenderInput = {
+  /** Base64 encoded image of the depthmap. */
+  baseImage: Scalars['String']['input']
+  camera: Scalars['JSONObject']['input']
+  modelId: Scalars['ID']['input']
+  projectId: Scalars['ID']['input']
+  /** The generation prompt. */
+  prompt: Scalars['String']['input']
+  versionId: Scalars['ID']['input']
+}
+
+export type JoinWorkspaceInput = {
+  workspaceId: Scalars['ID']['input']
 }
 
 export type LegacyCommentViewerData = {
@@ -715,23 +949,39 @@ export type LegacyCommentViewerData = {
  */
 export type LimitedUser = {
   __typename?: 'LimitedUser'
-  /** All the recent activity from this user in chronological order */
+  /**
+   * All the recent activity from this user in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   activity?: Maybe<ActivityCollection>
   avatar?: Maybe<Scalars['String']['output']>
   bio?: Maybe<Scalars['String']['output']>
-  /** Get public stream commits authored by the user */
+  /**
+   * Get public stream commits authored by the user
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   commits?: Maybe<CommitCollection>
   company?: Maybe<Scalars['String']['output']>
   id: Scalars['ID']['output']
   name: Scalars['String']['output']
   role?: Maybe<Scalars['String']['output']>
-  /** Returns all discoverable streams that the user is a collaborator on */
+  /**
+   * Returns all discoverable streams that the user is a collaborator on
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   streams: StreamCollection
-  /** The user's timeline in chronological order */
+  /**
+   * The user's timeline in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   timeline?: Maybe<ActivityCollection>
-  /** Total amount of favorites attached to streams owned by the user */
+  /**
+   * Total amount of favorites attached to streams owned by the user
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   totalOwnedStreamsFavorites: Scalars['Int']['output']
   verified?: Maybe<Scalars['Boolean']['output']>
+  workspaceDomainPolicyCompliant?: Maybe<Scalars['Boolean']['output']>
 }
 
 /**
@@ -775,10 +1025,25 @@ export type LimitedUserTimelineArgs = {
   limit?: Scalars['Int']['input']
 }
 
+/**
+ * Limited user type, for showing public info about a user
+ * to another user
+ */
+export type LimitedUserWorkspaceDomainPolicyCompliantArgs = {
+  workspaceId?: InputMaybe<Scalars['String']['input']>
+}
+
+export type MarkReceivedVersionInput = {
+  message?: InputMaybe<Scalars['String']['input']>
+  projectId: Scalars['String']['input']
+  sourceApplication: Scalars['String']['input']
+  versionId: Scalars['String']['input']
+}
+
 export type Model = {
   __typename?: 'Model'
   author: LimitedUser
-  automationStatus?: Maybe<AutomationsStatus>
+  automationsStatus?: Maybe<TriggeredAutomationsStatus>
   /** Return a model tree of children */
   childrenTree: Array<ModelsTreeItem>
   /** All comment threads in this model */
@@ -901,9 +1166,13 @@ export type Mutation = {
   appTokenCreate: Scalars['String']['output']
   /** Update an existing third party application. **Note: This will invalidate all existing tokens, refresh tokens and access codes and will require existing users to re-authorize it.** */
   appUpdate: Scalars['Boolean']['output']
-  automationMutations: AutomationMutations
+  automateFunctionRunStatusReport: Scalars['Boolean']['output']
+  automateMutations: AutomateMutations
+  /** @deprecated Part of the old API surface and will be removed in the future. Use ModelMutations.create instead. */
   branchCreate: Scalars['String']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use ModelMutations.delete instead. */
   branchDelete: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use ModelMutations.update instead. */
   branchUpdate: Scalars['Boolean']['output']
   /** Broadcast user activity in the viewer */
   broadcastViewerUserActivity: Scalars['Boolean']['output']
@@ -933,52 +1202,111 @@ export type Mutation = {
    * @deprecated Use commentMutations version
    */
   commentView: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.create instead. */
   commitCreate: Scalars['String']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.delete instead. */
   commitDelete: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.markReceived instead. */
   commitReceive: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.update/moveToModel instead. */
   commitUpdate: Scalars['Boolean']['output']
-  /** Delete a batch of commits */
+  /**
+   * Delete a batch of commits
+   * @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.delete instead.
+   */
   commitsDelete: Scalars['Boolean']['output']
-  /** Move a batch of commits to a new branch */
+  /**
+   * Move a batch of commits to a new branch
+   * @deprecated Part of the old API surface and will be removed in the future. Use VersionMutations.moveToModel instead.
+   */
   commitsMove: Scalars['Boolean']['output']
-  /** Delete a pending invite */
+  /**
+   * Delete a pending invite
+   * Note: The required scope to invoke this is not given out to app or personal access tokens
+   */
   inviteDelete: Scalars['Boolean']['output']
-  /** Re-send a pending invite */
+  /**
+   * Re-send a pending invite
+   * Note: The required scope to invoke this is not given out to app or personal access tokens
+   */
   inviteResend: Scalars['Boolean']['output']
   modelMutations: ModelMutations
-  objectCreate: Array<Maybe<Scalars['String']['output']>>
+  /** @deprecated Part of the old API surface and will be removed in the future. */
+  objectCreate: Array<Scalars['String']['output']>
   projectMutations: ProjectMutations
   /** (Re-)send the account verification e-mail */
   requestVerification: Scalars['Boolean']['output']
   requestVerificationByEmail: Scalars['Boolean']['output']
   serverInfoUpdate?: Maybe<Scalars['Boolean']['output']>
+  /** Note: The required scope to invoke this is not given out to app or personal access tokens */
   serverInviteBatchCreate: Scalars['Boolean']['output']
   /** Invite a new user to the speckle server and return the invite ID */
   serverInviteCreate: Scalars['Boolean']['output']
-  /** Request access to a specific stream */
+  /**
+   * Request access to a specific stream
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectAccessRequestMutations.create instead.
+   */
   streamAccessRequestCreate: StreamAccessRequest
-  /** Accept or decline a stream access request. Must be a stream owner to invoke this. */
+  /**
+   * Accept or decline a stream access request. Must be a stream owner to invoke this.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectAccessRequestMutations.use instead.
+   */
   streamAccessRequestUse: Scalars['Boolean']['output']
-  /** Creates a new stream. */
+  /**
+   * Creates a new stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.create instead.
+   */
   streamCreate?: Maybe<Scalars['String']['output']>
-  /** Deletes an existing stream. */
+  /**
+   * Deletes an existing stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.delete instead.
+   */
   streamDelete: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. */
   streamFavorite?: Maybe<Stream>
+  /**
+   * Note: The required scope to invoke this is not given out to app or personal access tokens
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectInviteMutations.batchCreate instead.
+   */
   streamInviteBatchCreate: Scalars['Boolean']['output']
-  /** Cancel a pending stream invite. Can only be invoked by a stream owner. */
+  /**
+   * Cancel a pending stream invite. Can only be invoked by a stream owner.
+   * Note: The required scope to invoke this is not given out to app or personal access tokens
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectInviteMutations.cancel instead.
+   */
   streamInviteCancel: Scalars['Boolean']['output']
-  /** Invite a new or registered user to the specified stream */
+  /**
+   * Invite a new or registered user to the specified stream
+   * Note: The required scope to invoke this is not given out to app or personal access tokens
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectInviteMutations.create instead.
+   */
   streamInviteCreate: Scalars['Boolean']['output']
-  /** Accept or decline a stream invite */
+  /**
+   * Accept or decline a stream invite
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectInviteMutations.use instead.
+   */
   streamInviteUse: Scalars['Boolean']['output']
-  /** Remove yourself from stream collaborators (not possible for the owner) */
+  /**
+   * Remove yourself from stream collaborators (not possible for the owner)
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.leave instead.
+   */
   streamLeave: Scalars['Boolean']['output']
-  /** Revokes the permissions of a user on a given stream. */
+  /**
+   * Revokes the permissions of a user on a given stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.updateRole instead.
+   */
   streamRevokePermission?: Maybe<Scalars['Boolean']['output']>
-  /** Updates an existing stream. */
+  /**
+   * Updates an existing stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.update instead.
+   */
   streamUpdate: Scalars['Boolean']['output']
-  /** Update permissions of a user on a given stream. */
+  /**
+   * Update permissions of a user on a given stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.updateRole instead.
+   */
   streamUpdatePermission?: Maybe<Scalars['Boolean']['output']>
+  /** @deprecated Part of the old API surface and will be removed in the future. Use ProjectMutations.batchDelete instead. */
   streamsDelete: Scalars['Boolean']['output']
   /**
    * Used for broadcasting real time typing status in comment threads. Does not persist any info.
@@ -1006,6 +1334,7 @@ export type Mutation = {
   webhookDelete: Scalars['String']['output']
   /** Updates an existing webhook */
   webhookUpdate: Scalars['String']['output']
+  workspaceMutations: WorkspaceMutations
 }
 
 export type MutationAdminDeleteUserArgs = {
@@ -1033,11 +1362,15 @@ export type MutationAppRevokeAccessArgs = {
 }
 
 export type MutationAppTokenCreateArgs = {
-  token: ApiTokenCreateInput
+  token: AppTokenCreateInput
 }
 
 export type MutationAppUpdateArgs = {
   app: AppUpdateInput
+}
+
+export type MutationAutomateFunctionRunStatusReportArgs = {
+  input: AutomateFunctionRunStatusReportInput
 }
 
 export type MutationBranchCreateArgs = {
@@ -1237,6 +1570,7 @@ export type MutationWebhookUpdateArgs = {
 
 export type Object = {
   __typename?: 'Object'
+  /** @deprecated Not implemented. */
   applicationId?: Maybe<Scalars['String']['output']>
   /**
    * Get any objects that this object references. In the case of commits, this will give you a commit's constituent objects.
@@ -1252,6 +1586,7 @@ export type Object = {
    *     ...
    *   }
    * ```
+   * @deprecated Part of the old API surface and will be removed in the future.
    */
   commentCount: Scalars['Int']['output']
   createdAt?: Maybe<Scalars['DateTime']['output']>
@@ -1274,7 +1609,7 @@ export type ObjectChildrenArgs = {
 export type ObjectCollection = {
   __typename?: 'ObjectCollection'
   cursor?: Maybe<Scalars['String']['output']>
-  objects: Array<Maybe<Object>>
+  objects: Array<Object>
   totalCount: Scalars['Int']['output']
 }
 
@@ -1314,7 +1649,9 @@ export type PendingStreamCollaborator = {
   projectId: Scalars['String']['output']
   projectName: Scalars['String']['output']
   role: Scalars['String']['output']
+  /** @deprecated Use projectId instead */
   streamId: Scalars['String']['output']
+  /** @deprecated Use projectName instead */
   streamName: Scalars['String']['output']
   /** E-mail address or name of the invited user */
   title: Scalars['String']['output']
@@ -1324,9 +1661,47 @@ export type PendingStreamCollaborator = {
   user?: Maybe<LimitedUser>
 }
 
+export type PendingWorkspaceCollaborator = {
+  __typename?: 'PendingWorkspaceCollaborator'
+  /**
+   * E-mail address if target is unregistered or primary e-mail of target registered user
+   * if token was specified to retrieve this invite
+   */
+  email?: Maybe<Scalars['String']['output']>
+  id: Scalars['ID']['output']
+  inviteId: Scalars['String']['output']
+  invitedBy: LimitedUser
+  /** Target workspace role */
+  role: Scalars['String']['output']
+  /** E-mail address or name of the invited user */
+  title: Scalars['String']['output']
+  /**
+   * Only available if the active user is the pending workspace collaborator or if it was already
+   * specified when retrieving this invite
+   */
+  token?: Maybe<Scalars['String']['output']>
+  updatedAt: Scalars['DateTime']['output']
+  /** Set only if user is registered */
+  user?: Maybe<LimitedUser>
+  workspaceId: Scalars['String']['output']
+  workspaceName: Scalars['String']['output']
+}
+
+export type PendingWorkspaceCollaboratorsFilter = {
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
 export type Project = {
   __typename?: 'Project'
   allowPublicComments: Scalars['Boolean']['output']
+  /** Get a single automation by id. Error will be thrown if automation is not found or inaccessible. */
+  automation: Automation
+  automations: AutomationCollection
+  blob?: Maybe<BlobMetadata>
+  /** Get the metadata collection of blobs stored for this stream. */
+  blobs?: Maybe<BlobMetadataCollection>
+  /** Get specific project comment/thread by ID */
+  comment?: Maybe<Comment>
   /** All comment threads in this project */
   commentThreads: ProjectCommentCollection
   createdAt: Scalars['DateTime']['output']
@@ -1336,6 +1711,8 @@ export type Project = {
   invitedTeam?: Maybe<Array<PendingStreamCollaborator>>
   /** Returns a specific model by its ID */
   model: Model
+  /** Retrieve a specific project model by its ID */
+  modelByName: Model
   /** Return a model tree of children for the specified model name */
   modelChildrenTree: Array<ModelsTreeItem>
   /** Returns a flat list of all models */
@@ -1346,6 +1723,9 @@ export type Project = {
    */
   modelsTree: ModelsTreeItemCollection
   name: Scalars['String']['output']
+  object?: Maybe<Object>
+  /** Pending project access requests */
+  pendingAccessRequests?: Maybe<Array<ProjectAccessRequest>>
   /** Returns a list models that are being created from a file import */
   pendingImportedModels: Array<FileUpload>
   /** Active user's role for this project. `null` if request is not authenticated, or the project is not explicitly shared with you. */
@@ -1354,22 +1734,54 @@ export type Project = {
   sourceApps: Array<Scalars['String']['output']>
   team: Array<ProjectCollaborator>
   updatedAt: Scalars['DateTime']['output']
+  /** Retrieve a specific project version by its ID */
+  version?: Maybe<Version>
   /** Returns a flat list of all project versions */
   versions: VersionCollection
   /** Return metadata about resources being requested in the viewer */
   viewerResources: Array<ViewerResourceGroup>
   visibility: ProjectVisibility
   webhooks: WebhookCollection
+  workspace?: Maybe<Workspace>
+  workspaceId?: Maybe<Scalars['String']['output']>
+}
+
+export type ProjectAutomationArgs = {
+  id: Scalars['String']['input']
+}
+
+export type ProjectAutomationsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<Scalars['String']['input']>
+  limit?: InputMaybe<Scalars['Int']['input']>
+}
+
+export type ProjectBlobArgs = {
+  id: Scalars['String']['input']
+}
+
+export type ProjectBlobsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  limit?: InputMaybe<Scalars['Int']['input']>
+  query?: InputMaybe<Scalars['String']['input']>
+}
+
+export type ProjectCommentArgs = {
+  id: Scalars['String']['input']
 }
 
 export type ProjectCommentThreadsArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>
   filter?: InputMaybe<ProjectCommentsFilter>
-  limit?: Scalars['Int']['input']
+  limit?: InputMaybe<Scalars['Int']['input']>
 }
 
 export type ProjectModelArgs = {
   id: Scalars['String']['input']
+}
+
+export type ProjectModelByNameArgs = {
+  name: Scalars['String']['input']
 }
 
 export type ProjectModelChildrenTreeArgs = {
@@ -1388,8 +1800,16 @@ export type ProjectModelsTreeArgs = {
   limit?: Scalars['Int']['input']
 }
 
+export type ProjectObjectArgs = {
+  id: Scalars['String']['input']
+}
+
 export type ProjectPendingImportedModelsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>
+}
+
+export type ProjectVersionArgs = {
+  id: Scalars['String']['input']
 }
 
 export type ProjectVersionsArgs = {
@@ -1406,16 +1826,110 @@ export type ProjectWebhooksArgs = {
   id?: InputMaybe<Scalars['String']['input']>
 }
 
-export type ProjectAutomationsStatusUpdatedMessage = {
-  __typename?: 'ProjectAutomationsStatusUpdatedMessage'
-  model: Model
+/** Created when a user requests to become a contributor on a project */
+export type ProjectAccessRequest = {
+  __typename?: 'ProjectAccessRequest'
+  createdAt: Scalars['DateTime']['output']
+  id: Scalars['ID']['output']
+  /** Can only be selected if authed user has proper access */
   project: Project
-  status: AutomationsStatus
-  version: Version
+  projectId: Scalars['String']['output']
+  requester: LimitedUser
+  requesterId: Scalars['String']['output']
+}
+
+export type ProjectAccessRequestMutations = {
+  __typename?: 'ProjectAccessRequestMutations'
+  /** Request access to a specific project */
+  create: ProjectAccessRequest
+  /** Accept or decline a project access request. Must be a project owner to invoke this. */
+  use: Project
+}
+
+export type ProjectAccessRequestMutationsCreateArgs = {
+  projectId: Scalars['String']['input']
+}
+
+export type ProjectAccessRequestMutationsUseArgs = {
+  accept: Scalars['Boolean']['input']
+  requestId: Scalars['String']['input']
+  role?: StreamRole
+}
+
+export type ProjectAutomationCreateInput = {
+  enabled: Scalars['Boolean']['input']
+  name: Scalars['String']['input']
+}
+
+export type ProjectAutomationMutations = {
+  __typename?: 'ProjectAutomationMutations'
+  create: Automation
+  createRevision: AutomationRevision
+  createTestAutomation: Automation
+  createTestAutomationRun: TestAutomationRun
+  /**
+   * Trigger an automation with a fake "version created" trigger. The "version created" will
+   * just refer to the last version of the model.
+   */
+  trigger: Scalars['String']['output']
+  update: Automation
+}
+
+export type ProjectAutomationMutationsCreateArgs = {
+  input: ProjectAutomationCreateInput
+}
+
+export type ProjectAutomationMutationsCreateRevisionArgs = {
+  input: ProjectAutomationRevisionCreateInput
+}
+
+export type ProjectAutomationMutationsCreateTestAutomationArgs = {
+  input: ProjectTestAutomationCreateInput
+}
+
+export type ProjectAutomationMutationsCreateTestAutomationRunArgs = {
+  automationId: Scalars['ID']['input']
+}
+
+export type ProjectAutomationMutationsTriggerArgs = {
+  automationId: Scalars['ID']['input']
+}
+
+export type ProjectAutomationMutationsUpdateArgs = {
+  input: ProjectAutomationUpdateInput
+}
+
+export type ProjectAutomationRevisionCreateInput = {
+  automationId: Scalars['ID']['input']
+  functions: Array<AutomationRevisionCreateFunctionInput>
+  /** AutomateTypes.TriggerDefinitionsSchema type from @speckle/shared */
+  triggerDefinitions: Scalars['JSONObject']['input']
+}
+
+export type ProjectAutomationUpdateInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>
+  id: Scalars['ID']['input']
+  name?: InputMaybe<Scalars['String']['input']>
+}
+
+export type ProjectAutomationsUpdatedMessage = {
+  __typename?: 'ProjectAutomationsUpdatedMessage'
+  automation?: Maybe<Automation>
+  automationId: Scalars['String']['output']
+  /** Only set if type === CREATED_REVISION */
+  revision?: Maybe<AutomationRevision>
+  type: ProjectAutomationsUpdatedMessageType
+}
+
+export enum ProjectAutomationsUpdatedMessageType {
+  Created = 'CREATED',
+  CreatedRevision = 'CREATED_REVISION',
+  Updated = 'UPDATED',
 }
 
 export type ProjectCollaborator = {
   __typename?: 'ProjectCollaborator'
+  id: Scalars['ID']['output']
   role: Scalars['String']['output']
   user: LimitedUser
 }
@@ -1470,6 +1984,7 @@ export type ProjectCreateInput = {
   description?: InputMaybe<Scalars['String']['input']>
   name?: InputMaybe<Scalars['String']['input']>
   visibility?: InputMaybe<ProjectVisibility>
+  workspaceId?: InputMaybe<Scalars['String']['input']>
 }
 
 export type ProjectFileImportUpdatedMessage = {
@@ -1504,6 +2019,11 @@ export type ProjectInviteMutations = {
   cancel: Project
   /** Invite a new or registered user to be a project collaborator. Can only be invoked by a project owner. */
   create: Project
+  /**
+   * Create invite(-s) for a project in a workspace. Unlike the base create() mutation, this allows
+   * configuring the workspace role.
+   */
+  createForWorkspace: Project
   /** Accept or decline a project invite */
   use: Scalars['Boolean']['output']
 }
@@ -1520,6 +2040,11 @@ export type ProjectInviteMutationsCancelArgs = {
 
 export type ProjectInviteMutationsCreateArgs = {
   input: ProjectInviteCreateInput
+  projectId: Scalars['ID']['input']
+}
+
+export type ProjectInviteMutationsCreateForWorkspaceArgs = {
+  inputs: Array<WorkspaceProjectInviteCreateInput>
   projectId: Scalars['ID']['input']
 }
 
@@ -1574,6 +2099,11 @@ export enum ProjectModelsUpdatedMessageType {
 
 export type ProjectMutations = {
   __typename?: 'ProjectMutations'
+  /** Access request related mutations */
+  accessRequestMutations: ProjectAccessRequestMutations
+  automationMutations: ProjectAutomationMutations
+  /** Batch delete projects */
+  batchDelete: Scalars['Boolean']['output']
   /** Create new project */
   create: Project
   /**
@@ -1591,6 +2121,14 @@ export type ProjectMutations = {
   update: Project
   /** Update role for a collaborator */
   updateRole: Project
+}
+
+export type ProjectMutationsAutomationMutationsArgs = {
+  projectId: Scalars['ID']['input']
+}
+
+export type ProjectMutationsBatchDeleteArgs = {
+  ids: Array<Scalars['String']['input']>
 }
 
 export type ProjectMutationsCreateArgs = {
@@ -1637,6 +2175,32 @@ export type ProjectPendingVersionsUpdatedMessage = {
 export enum ProjectPendingVersionsUpdatedMessageType {
   Created = 'CREATED',
   Updated = 'UPDATED',
+}
+
+export type ProjectRole = {
+  __typename?: 'ProjectRole'
+  project: Project
+  role: Scalars['String']['output']
+}
+
+export type ProjectTestAutomationCreateInput = {
+  functionId: Scalars['String']['input']
+  modelId: Scalars['String']['input']
+  name: Scalars['String']['input']
+}
+
+export type ProjectTriggeredAutomationsStatusUpdatedMessage = {
+  __typename?: 'ProjectTriggeredAutomationsStatusUpdatedMessage'
+  model: Model
+  project: Project
+  run: AutomateRun
+  type: ProjectTriggeredAutomationsStatusUpdatedMessageType
+  version: Version
+}
+
+export enum ProjectTriggeredAutomationsStatusUpdatedMessageType {
+  RunCreated = 'RUN_CREATED',
+  RunUpdated = 'RUN_UPDATED',
 }
 
 /** Any values left null will be ignored, so only set the properties that you want updated */
@@ -1720,19 +2284,31 @@ export type Query = {
   adminUsers?: Maybe<AdminUsersListCollection>
   /** Gets a specific app from the server. */
   app?: Maybe<ServerApp>
-  /** Returns all the publicly available apps on this server. */
+  /**
+   * Returns all the publicly available apps on this server.
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   apps?: Maybe<Array<Maybe<ServerAppListItem>>>
   /** If user is authenticated using an app token, this will describe the app */
   authenticatedAsApp?: Maybe<ServerAppListItem>
+  /** Get a single automate function by id. Error will be thrown if function is not found or inaccessible. */
+  automateFunction: AutomateFunction
+  automateFunctions: AutomateFunctionCollection
+  /** Part of the automation/function creation handshake mechanism */
+  automateValidateAuthCode: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.comment instead. */
   comment?: Maybe<Comment>
   /**
    * This query can be used in the following ways:
    * - get all the comments for a stream: **do not pass in any resource identifiers**.
    * - get the comments targeting any of a set of provided resources (comments/objects): **pass in an array of resources.**
-   * @deprecated Use 'commentThreads' fields instead
+   * @deprecated Use Project/Version/Model 'commentThreads' fields instead
    */
   comments?: Maybe<CommentCollection>
-  /** All of the discoverable streams of the server */
+  /**
+   * All of the discoverable streams of the server
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   discoverableStreams?: Maybe<StreamCollection>
   /** Get the (limited) profile information of another server user */
   otherUser?: Maybe<LimitedUser>
@@ -1754,36 +2330,58 @@ export type Query = {
   /**
    * Returns a specific stream. Will throw an authorization error if active user isn't authorized
    * to see it, for example, if a stream isn't public and the user doesn't have the appropriate rights.
+   * @deprecated Part of the old API surface and will be removed in the future. Use Query.project instead.
    */
   stream?: Maybe<Stream>
-  /** Get authed user's stream access request */
+  /**
+   * Get authed user's stream access request
+   * @deprecated Part of the old API surface and will be removed in the future. Use User.projectAccessRequest instead.
+   */
   streamAccessRequest?: Maybe<StreamAccessRequest>
   /**
    * Look for an invitation to a stream, for the current user (authed or not). If token
    * isn't specified, the server will look for any valid invite.
+   * @deprecated Part of the old API surface and will be removed in the future. Use Query.projectInvite instead.
    */
   streamInvite?: Maybe<PendingStreamCollaborator>
-  /** Get all invitations to streams that the active user has */
+  /**
+   * Get all invitations to streams that the active user has
+   * @deprecated Part of the old API surface and will be removed in the future. Use User.projectInvites instead.
+   */
   streamInvites: Array<PendingStreamCollaborator>
   /**
    * Returns all streams that the active user is a collaborator on.
    * Pass in the `query` parameter to search by name, description or ID.
+   * @deprecated Part of the old API surface and will be removed in the future. Use User.projects instead.
    */
   streams?: Maybe<StreamCollection>
-  testList: Array<TestItem>
-  testNumber?: Maybe<Scalars['Int']['output']>
   /**
    * Gets the profile of a user. If no id argument is provided, will return the current authenticated user's profile (as extracted from the authorization header).
    * @deprecated To be removed in the near future! Use 'activeUser' to get info about the active user or 'otherUser' to get info about another user.
    */
   user?: Maybe<User>
-  /** Validate password strength */
+  /**
+   * Validate password strength
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   userPwdStrength: PasswordStrengthCheckResults
   /**
    * Search for users and return limited metadata about them, if you have the server:user role.
    * The query looks for matches in name & email
    */
   userSearch: UserSearchResultCollection
+  /** Validates the slug, to make sure it contains only valid characters and its not taken. */
+  validateWorkspaceSlug: Scalars['Boolean']['output']
+  workspace: Workspace
+  workspaceBySlug: Workspace
+  /**
+   * Look for an invitation to a workspace, for the current user (authed or not).
+   *
+   * If token is specified, it will return the corresponding invite even if it belongs to a different user.
+   *
+   * Either token or workspaceId must be specified, or both
+   */
+  workspaceInvite?: Maybe<PendingWorkspaceCollaborator>
 }
 
 export type QueryAdminStreamsArgs = {
@@ -1802,6 +2400,20 @@ export type QueryAdminUsersArgs = {
 
 export type QueryAppArgs = {
   id: Scalars['String']['input']
+}
+
+export type QueryAutomateFunctionArgs = {
+  id: Scalars['ID']['input']
+}
+
+export type QueryAutomateFunctionsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<AutomateFunctionsFilter>
+  limit?: InputMaybe<Scalars['Int']['input']>
+}
+
+export type QueryAutomateValidateAuthCodeArgs = {
+  payload: AutomateAuthCodePayloadTest
 }
 
 export type QueryCommentArgs = {
@@ -1837,7 +2449,7 @@ export type QueryProjectInviteArgs = {
 }
 
 export type QueryServerInviteByTokenArgs = {
-  token: Scalars['String']['input']
+  token?: InputMaybe<Scalars['String']['input']>
 }
 
 export type QueryStreamArgs = {
@@ -1873,6 +2485,24 @@ export type QueryUserSearchArgs = {
   emailOnly?: InputMaybe<Scalars['Boolean']['input']>
   limit?: Scalars['Int']['input']
   query: Scalars['String']['input']
+}
+
+export type QueryValidateWorkspaceSlugArgs = {
+  slug: Scalars['String']['input']
+}
+
+export type QueryWorkspaceArgs = {
+  id: Scalars['String']['input']
+}
+
+export type QueryWorkspaceBySlugArgs = {
+  slug: Scalars['String']['input']
+}
+
+export type QueryWorkspaceInviteArgs = {
+  options?: InputMaybe<WorkspaceInviteLookupOptions>
+  token?: InputMaybe<Scalars['String']['input']>
+  workspaceId?: InputMaybe<Scalars['String']['input']>
 }
 
 /** Deprecated: Used by old stream-based mutations */
@@ -1946,20 +2576,45 @@ export type ServerAppListItem = {
   trustByDefault?: Maybe<Scalars['Boolean']['output']>
 }
 
+export type ServerAutomateInfo = {
+  __typename?: 'ServerAutomateInfo'
+  availableFunctionTemplates: Array<AutomateFunctionTemplate>
+}
+
+/** Server configuration. */
+export type ServerConfiguration = {
+  __typename?: 'ServerConfiguration'
+  blobSizeLimitBytes: Scalars['Int']['output']
+  objectMultipartUploadSizeLimitBytes: Scalars['Int']['output']
+  objectSizeLimitBytes: Scalars['Int']['output']
+}
+
 /** Information about this server. */
 export type ServerInfo = {
   __typename?: 'ServerInfo'
   adminContact?: Maybe<Scalars['String']['output']>
   /** The authentication strategies available on this server. */
   authStrategies: Array<AuthStrategy>
+  automate: ServerAutomateInfo
   /** Base URL of Speckle Automate, if set */
   automateUrl?: Maybe<Scalars['String']['output']>
+  /** @deprecated Use the ServerInfo{configuration{blobSizeLimitBytes}} field instead. */
   blobSizeLimitBytes: Scalars['Int']['output']
   canonicalUrl?: Maybe<Scalars['String']['output']>
   company?: Maybe<Scalars['String']['output']>
+  /**
+   * Configuration values that are specific to this server.
+   * These are read-only and can only be adjusted during server setup.
+   * Please contact your server administrator if you wish to suggest a change to these values.
+   */
+  configuration: ServerConfiguration
   description?: Maybe<Scalars['String']['output']>
+  /** Whether or not to show messaging about FE2 (banners etc.) */
+  enableNewWebUiMessaging?: Maybe<Scalars['Boolean']['output']>
   guestModeEnabled: Scalars['Boolean']['output']
   inviteOnly?: Maybe<Scalars['Boolean']['output']>
+  /** Server relocation / migration info */
+  migration?: Maybe<ServerMigration>
   name: Scalars['String']['output']
   /** @deprecated Use role constants from the @speckle/shared npm package instead */
   roles: Array<Role>
@@ -1967,6 +2622,7 @@ export type ServerInfo = {
   serverRoles: Array<ServerRoleItem>
   termsOfService?: Maybe<Scalars['String']['output']>
   version?: Maybe<Scalars['String']['output']>
+  workspaces: ServerWorkspacesInfo
 }
 
 export type ServerInfoUpdateInput = {
@@ -1991,6 +2647,12 @@ export type ServerInviteCreateInput = {
   message?: InputMaybe<Scalars['String']['input']>
   /** Can only be specified if guest mode is on or if the user is an admin */
   serverRole?: InputMaybe<Scalars['String']['input']>
+}
+
+export type ServerMigration = {
+  __typename?: 'ServerMigration'
+  movedFrom?: Maybe<Scalars['String']['output']>
+  movedTo?: Maybe<Scalars['String']['output']>
 }
 
 export enum ServerRole {
@@ -2029,6 +2691,19 @@ export type ServerStats = {
   userHistory?: Maybe<Array<Maybe<Scalars['JSONObject']['output']>>>
 }
 
+export type ServerWorkspacesInfo = {
+  __typename?: 'ServerWorkspacesInfo'
+  /**
+   * This is a backend control variable for the workspaces feature set.
+   * Since workspaces need a backend logic to be enabled, this is not enough as a feature flag.
+   */
+  workspacesEnabled: Scalars['Boolean']['output']
+}
+
+export type SetPrimaryUserEmailInput = {
+  id: Scalars['ID']['input']
+}
+
 export type SmartTextEditorValue = {
   __typename?: 'SmartTextEditorValue'
   /** File attachments, if any */
@@ -2051,13 +2726,22 @@ export enum SortDirection {
 
 export type Stream = {
   __typename?: 'Stream'
-  /** All the recent activity on this stream in chronological order */
+  /**
+   * All the recent activity on this stream in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   activity?: Maybe<ActivityCollection>
   allowPublicComments: Scalars['Boolean']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.blob instead. */
   blob?: Maybe<BlobMetadata>
-  /** Get the metadata collection of blobs stored for this stream. */
+  /**
+   * Get the metadata collection of blobs stored for this stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use Project.blobs instead.
+   */
   blobs?: Maybe<BlobMetadataCollection>
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.model or Project.modelByName instead. */
   branch?: Maybe<Branch>
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.models or Project.modelsTree instead. */
   branches?: Maybe<BranchCollection>
   collaborators: Array<StreamCollaborator>
   /**
@@ -2069,18 +2753,27 @@ export type Stream = {
    *     ...
    *   }
    * ```
+   * @deprecated Part of the old API surface and will be removed in the future.
    */
   commentCount: Scalars['Int']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.version instead. */
   commit?: Maybe<Commit>
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.versions instead. */
   commits?: Maybe<CommitCollection>
   createdAt: Scalars['DateTime']['output']
   description?: Maybe<Scalars['String']['output']>
   /** Date when you favorited this stream. `null` if stream isn't viewed from a specific user's perspective or if it isn't favorited. */
   favoritedDate?: Maybe<Scalars['DateTime']['output']>
   favoritesCount: Scalars['Int']['output']
-  /** Returns a specific file upload that belongs to this stream. */
+  /**
+   * Returns a specific file upload that belongs to this stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use Project.pendingImportedModels or Model.pendingImportedVersions instead.
+   */
   fileUpload?: Maybe<FileUpload>
-  /** Returns a list of all the file uploads for this stream. */
+  /**
+   * Returns a list of all the file uploads for this stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use Project.pendingImportedModels or Model.pendingImportedVersions instead.
+   */
   fileUploads: Array<FileUpload>
   id: Scalars['String']['output']
   /**
@@ -2091,8 +2784,12 @@ export type Stream = {
   /** Whether the stream can be viewed by non-contributors */
   isPublic: Scalars['Boolean']['output']
   name: Scalars['String']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.object instead. */
   object?: Maybe<Object>
-  /** Pending stream access requests */
+  /**
+   * Pending stream access requests
+   * @deprecated Part of the old API surface and will be removed in the future. Use Project.pendingAccessRequests instead.
+   */
   pendingAccessRequests?: Maybe<Array<StreamAccessRequest>>
   /** Collaborators who have been invited, but not yet accepted. */
   pendingCollaborators?: Maybe<Array<PendingStreamCollaborator>>
@@ -2100,6 +2797,7 @@ export type Stream = {
   role?: Maybe<Scalars['String']['output']>
   size?: Maybe<Scalars['String']['output']>
   updatedAt: Scalars['DateTime']['output']
+  /** @deprecated Part of the old API surface and will be removed in the future. Use Project.webhooks instead. */
   webhooks: WebhookCollection
 }
 
@@ -2240,11 +2938,20 @@ export type Subscription = {
   __typename?: 'Subscription'
   /** It's lonely in the void. */
   _?: Maybe<Scalars['String']['output']>
-  /** Subscribe to branch created event */
+  /**
+   * Subscribe to branch created event
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectModelsUpdated' instead.
+   */
   branchCreated?: Maybe<Scalars['JSONObject']['output']>
-  /** Subscribe to branch deleted event */
+  /**
+   * Subscribe to branch deleted event
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectModelsUpdated' instead.
+   */
   branchDeleted?: Maybe<Scalars['JSONObject']['output']>
-  /** Subscribe to branch updated event. */
+  /**
+   * Subscribe to branch updated event.
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectModelsUpdated' instead.
+   */
   branchUpdated?: Maybe<Scalars['JSONObject']['output']>
   /**
    * Subscribe to new comment events. There's two ways to use this subscription:
@@ -2260,19 +2967,32 @@ export type Subscription = {
    * @deprecated Use projectCommentsUpdated or viewerUserActivityBroadcasted for reply status
    */
   commentThreadActivity: CommentThreadActivityMessage
-  /** Subscribe to commit created event */
+  /**
+   * Subscribe to commit created event
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectVersionsUpdated' instead.
+   */
   commitCreated?: Maybe<Scalars['JSONObject']['output']>
-  /** Subscribe to commit deleted event */
+  /**
+   * Subscribe to commit deleted event
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectVersionsUpdated' instead.
+   */
   commitDeleted?: Maybe<Scalars['JSONObject']['output']>
-  /** Subscribe to commit updated event. */
+  /**
+   * Subscribe to commit updated event.
+   * @deprecated Part of the old API surface and will be removed in the future. Use 'projectVersionsUpdated' instead.
+   */
   commitUpdated?: Maybe<Scalars['JSONObject']['output']>
-  projectAutomationsStatusUpdated: ProjectAutomationsStatusUpdatedMessage
+  /** Subscribe to updates to automations in the project */
+  projectAutomationsUpdated: ProjectAutomationsUpdatedMessage
   /**
    * Subscribe to updates to resource comments/threads. Optionally specify resource ID string to only receive
    * updates regarding comments for those resources.
    */
   projectCommentsUpdated: ProjectCommentsUpdatedMessage
-  /** Subscribe to changes to any of a project's file imports */
+  /**
+   * Subscribe to changes to any of a project's file imports
+   * @deprecated Part of the old API surface and will be removed in the future. Use projectPendingModelsUpdated or projectPendingVersionsUpdated instead.
+   */
   projectFileImportUpdated: ProjectFileImportUpdatedMessage
   /** Subscribe to changes to a project's models. Optionally specify modelIds to track. */
   projectModelsUpdated: ProjectModelsUpdatedMessage
@@ -2280,26 +3000,38 @@ export type Subscription = {
   projectPendingModelsUpdated: ProjectPendingModelsUpdatedMessage
   /** Subscribe to changes to a project's pending versions */
   projectPendingVersionsUpdated: ProjectPendingVersionsUpdatedMessage
+  /** Subscribe to updates to any triggered automations statuses in the project */
+  projectTriggeredAutomationsStatusUpdated: ProjectTriggeredAutomationsStatusUpdatedMessage
   /** Track updates to a specific project */
   projectUpdated: ProjectUpdatedMessage
+  projectVersionGendoAIRenderCreated: GendoAiRender
+  projectVersionGendoAIRenderUpdated: GendoAiRender
   /** Subscribe to when a project's versions get their preview image fully generated. */
   projectVersionsPreviewGenerated: ProjectVersionsPreviewGeneratedMessage
   /** Subscribe to changes to a project's versions. */
   projectVersionsUpdated: ProjectVersionsUpdatedMessage
-  /** Subscribes to stream deleted event. Use this in clients/components that pertain only to this stream. */
+  /**
+   * Subscribes to stream deleted event. Use this in clients/components that pertain only to this stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use projectUpdated instead.
+   */
   streamDeleted?: Maybe<Scalars['JSONObject']['output']>
-  /** Subscribes to stream updated event. Use this in clients/components that pertain only to this stream. */
+  /**
+   * Subscribes to stream updated event. Use this in clients/components that pertain only to this stream.
+   * @deprecated Part of the old API surface and will be removed in the future. Use projectUpdated instead.
+   */
   streamUpdated?: Maybe<Scalars['JSONObject']['output']>
   /** Track newly added or deleted projects owned by the active user */
   userProjectsUpdated: UserProjectsUpdatedMessage
   /**
    * Subscribes to new stream added event for your profile. Use this to display an up-to-date list of streams.
    * **NOTE**: If someone shares a stream with you, this subscription will be triggered with an extra value of `sharedBy` in the payload.
+   * @deprecated Part of the old API surface and will be removed in the future. Use userProjectsUpdated instead.
    */
   userStreamAdded?: Maybe<Scalars['JSONObject']['output']>
   /**
    * Subscribes to stream removed event for your profile. Use this to display an up-to-date list of streams for your profile.
    * **NOTE**: If someone revokes your permissions on a stream, this subscription will be triggered with an extra value of `revokedBy` in the payload.
+   * @deprecated Part of the old API surface and will be removed in the future. Use userProjectsUpdated instead.
    */
   userStreamRemoved?: Maybe<Scalars['JSONObject']['output']>
   /**
@@ -2347,7 +3079,7 @@ export type SubscriptionCommitUpdatedArgs = {
   streamId: Scalars['String']['input']
 }
 
-export type SubscriptionProjectAutomationsStatusUpdatedArgs = {
+export type SubscriptionProjectAutomationsUpdatedArgs = {
   projectId: Scalars['String']['input']
 }
 
@@ -2372,8 +3104,22 @@ export type SubscriptionProjectPendingVersionsUpdatedArgs = {
   id: Scalars['String']['input']
 }
 
+export type SubscriptionProjectTriggeredAutomationsStatusUpdatedArgs = {
+  projectId: Scalars['String']['input']
+}
+
 export type SubscriptionProjectUpdatedArgs = {
   id: Scalars['String']['input']
+}
+
+export type SubscriptionProjectVersionGendoAiRenderCreatedArgs = {
+  id: Scalars['String']['input']
+  versionId: Scalars['String']['input']
+}
+
+export type SubscriptionProjectVersionGendoAiRenderUpdatedArgs = {
+  id: Scalars['String']['input']
+  versionId: Scalars['String']['input']
 }
 
 export type SubscriptionProjectVersionsPreviewGeneratedArgs = {
@@ -2402,10 +3148,58 @@ export type SubscriptionViewerUserActivityBroadcastedArgs = {
   target: ViewerUpdateTrackingTarget
 }
 
-export type TestItem = {
-  __typename?: 'TestItem'
-  bar: Scalars['String']['output']
-  foo: Scalars['String']['output']
+export type TestAutomationRun = {
+  __typename?: 'TestAutomationRun'
+  automationRunId: Scalars['String']['output']
+  functionRunId: Scalars['String']['output']
+  triggers: Array<TestAutomationRunTrigger>
+}
+
+export type TestAutomationRunTrigger = {
+  __typename?: 'TestAutomationRunTrigger'
+  payload: TestAutomationRunTriggerPayload
+  triggerType: Scalars['String']['output']
+}
+
+export type TestAutomationRunTriggerPayload = {
+  __typename?: 'TestAutomationRunTriggerPayload'
+  modelId: Scalars['String']['output']
+  versionId: Scalars['String']['output']
+}
+
+export type TokenResourceIdentifier = {
+  __typename?: 'TokenResourceIdentifier'
+  id: Scalars['String']['output']
+  type: TokenResourceIdentifierType
+}
+
+export type TokenResourceIdentifierInput = {
+  id: Scalars['String']['input']
+  type: TokenResourceIdentifierType
+}
+
+export enum TokenResourceIdentifierType {
+  Project = 'project',
+  Workspace = 'workspace',
+}
+
+export type TriggeredAutomationsStatus = {
+  __typename?: 'TriggeredAutomationsStatus'
+  automationRuns: Array<AutomateRun>
+  id: Scalars['ID']['output']
+  status: AutomateRunStatus
+  statusMessage?: Maybe<Scalars['String']['output']>
+}
+
+/** Any null values will be ignored */
+export type UpdateAutomateFunctionInput = {
+  description?: InputMaybe<Scalars['String']['input']>
+  id: Scalars['ID']['input']
+  logo?: InputMaybe<Scalars['String']['input']>
+  name?: InputMaybe<Scalars['String']['input']>
+  /** SourceAppNames values from @speckle/shared */
+  supportedSourceApps?: InputMaybe<Array<Scalars['String']['input']>>
+  tags?: InputMaybe<Array<Scalars['String']['input']>>
 }
 
 export type UpdateModelInput = {
@@ -2427,27 +3221,37 @@ export type UpdateVersionInput = {
  */
 export type User = {
   __typename?: 'User'
-  /** All the recent activity from this user in chronological order */
+  /**
+   * All the recent activity from this user in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   activity?: Maybe<ActivityCollection>
   /** Returns a list of your personal api tokens. */
   apiTokens: Array<ApiToken>
   /** Returns the apps you have authorized. */
-  authorizedApps?: Maybe<Array<Maybe<ServerAppListItem>>>
+  authorizedApps?: Maybe<Array<ServerAppListItem>>
+  automateInfo: UserAutomateInfo
   avatar?: Maybe<Scalars['String']['output']>
   bio?: Maybe<Scalars['String']['output']>
   /**
    * Get commits authored by the user. If requested for another user, then only commits
    * from public streams will be returned.
+   * @deprecated Part of the old API surface and will be removed in the future. Use User.versions instead.
    */
   commits?: Maybe<CommitCollection>
   company?: Maybe<Scalars['String']['output']>
   /** Returns the apps you have created. */
   createdApps?: Maybe<Array<ServerApp>>
   createdAt?: Maybe<Scalars['DateTime']['output']>
+  /** Get discoverable workspaces with verified domains that match the active user's */
+  discoverableWorkspaces: Array<DiscoverableWorkspace>
+  /** Only returned if API user is the user being requested or an admin */
   email?: Maybe<Scalars['String']['output']>
+  emails: Array<UserEmail>
   /**
    * All the streams that a active user has favorited.
    * Note: You can't use this to retrieve another user's favorite streams.
+   * @deprecated Part of the old API surface and will be removed in the future.
    */
   favoriteStreams: StreamCollection
   /** Whether the user has a pending/active email verification token */
@@ -2458,6 +3262,8 @@ export type User = {
   name: Scalars['String']['output']
   notificationPreferences: Scalars['JSONObject']['output']
   profiles?: Maybe<Scalars['JSONObject']['output']>
+  /** Get pending project access request, that the user made */
+  projectAccessRequest?: Maybe<ProjectAccessRequest>
   /** Get all invitations to projects that the active user has */
   projectInvites: Array<PendingStreamCollaborator>
   /** Get projects that the user participates in */
@@ -2466,13 +3272,31 @@ export type User = {
   /**
    * Returns all streams that the user is a collaborator on. If requested for a user, who isn't the
    * authenticated user, then this will only return discoverable streams.
+   * @deprecated Part of the old API surface and will be removed in the future. Use User.projects instead.
    */
   streams: StreamCollection
-  /** The user's timeline in chronological order */
+  /**
+   * The user's timeline in chronological order
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   timeline?: Maybe<ActivityCollection>
-  /** Total amount of favorites attached to streams owned by the user */
+  /**
+   * Total amount of favorites attached to streams owned by the user
+   * @deprecated Part of the old API surface and will be removed in the future.
+   */
   totalOwnedStreamsFavorites: Scalars['Int']['output']
   verified?: Maybe<Scalars['Boolean']['output']>
+  /**
+   * Get (count of) user's versions. By default gets all versions of all projects the user has access to.
+   * Set authoredOnly=true to only retrieve versions authored by the user.
+   *
+   * Note: Only count resolution is currently implemented
+   */
+  versions: CountOnlyCollection
+  /** Get all invitations to workspaces that the active user has */
+  workspaceInvites: Array<PendingWorkspaceCollaborator>
+  /** Get the workspaces for the user */
+  workspaces: WorkspaceCollection
 }
 
 /**
@@ -2509,6 +3333,14 @@ export type UserFavoriteStreamsArgs = {
  * Full user type, should only be used in the context of admin operations or
  * when a user is reading/writing info about himself
  */
+export type UserProjectAccessRequestArgs = {
+  projectId: Scalars['String']['input']
+}
+
+/**
+ * Full user type, should only be used in the context of admin operations or
+ * when a user is reading/writing info about himself
+ */
 export type UserProjectsArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>
   filter?: InputMaybe<UserProjectsFilter>
@@ -2535,8 +3367,66 @@ export type UserTimelineArgs = {
   limit?: Scalars['Int']['input']
 }
 
+/**
+ * Full user type, should only be used in the context of admin operations or
+ * when a user is reading/writing info about himself
+ */
+export type UserVersionsArgs = {
+  authoredOnly?: Scalars['Boolean']['input']
+  limit?: Scalars['Int']['input']
+}
+
+/**
+ * Full user type, should only be used in the context of admin operations or
+ * when a user is reading/writing info about himself
+ */
+export type UserWorkspacesArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<UserWorkspacesFilter>
+  limit?: Scalars['Int']['input']
+}
+
+export type UserAutomateInfo = {
+  __typename?: 'UserAutomateInfo'
+  availableGithubOrgs: Array<Scalars['String']['output']>
+  hasAutomateGithubApp: Scalars['Boolean']['output']
+}
+
 export type UserDeleteInput = {
   email: Scalars['String']['input']
+}
+
+export type UserEmail = {
+  __typename?: 'UserEmail'
+  email: Scalars['String']['output']
+  id: Scalars['ID']['output']
+  primary: Scalars['Boolean']['output']
+  userId: Scalars['ID']['output']
+  verified: Scalars['Boolean']['output']
+}
+
+export type UserEmailMutations = {
+  __typename?: 'UserEmailMutations'
+  create: User
+  delete: User
+  requestNewEmailVerification?: Maybe<Scalars['Boolean']['output']>
+  setPrimary: User
+}
+
+export type UserEmailMutationsCreateArgs = {
+  input: CreateUserEmailInput
+}
+
+export type UserEmailMutationsDeleteArgs = {
+  input: DeleteUserEmailInput
+}
+
+export type UserEmailMutationsRequestNewEmailVerificationArgs = {
+  input: EmailVerificationRequestInput
+}
+
+export type UserEmailMutationsSetPrimaryArgs = {
+  input: SetPrimaryUserEmailInput
 }
 
 export type UserProjectsFilter = {
@@ -2579,24 +3469,36 @@ export type UserUpdateInput = {
   name?: InputMaybe<Scalars['String']['input']>
 }
 
+export type UserWorkspacesFilter = {
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
 export type Version = {
   __typename?: 'Version'
   authorUser?: Maybe<LimitedUser>
-  automationStatus?: Maybe<AutomationsStatus>
+  automationsStatus?: Maybe<TriggeredAutomationsStatus>
   /** All comment threads in this version */
   commentThreads: CommentCollection
   createdAt: Scalars['DateTime']['output']
+  gendoAIRender: GendoAiRender
+  gendoAIRenders: GendoAiRenderCollection
   id: Scalars['ID']['output']
   message?: Maybe<Scalars['String']['output']>
   model: Model
+  parents?: Maybe<Array<Maybe<Scalars['String']['output']>>>
   previewUrl: Scalars['String']['output']
   referencedObject: Scalars['String']['output']
   sourceApplication?: Maybe<Scalars['String']['output']>
+  totalChildrenCount?: Maybe<Scalars['Int']['output']>
 }
 
 export type VersionCommentThreadsArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>
   limit?: Scalars['Int']['input']
+}
+
+export type VersionGendoAiRenderArgs = {
+  id: Scalars['String']['input']
 }
 
 export type VersionCollection = {
@@ -2606,19 +3508,47 @@ export type VersionCollection = {
   totalCount: Scalars['Int']['output']
 }
 
+export type VersionCreatedTrigger = {
+  __typename?: 'VersionCreatedTrigger'
+  model?: Maybe<Model>
+  type: AutomateRunTriggerType
+  version?: Maybe<Version>
+}
+
+export type VersionCreatedTriggerDefinition = {
+  __typename?: 'VersionCreatedTriggerDefinition'
+  model?: Maybe<Model>
+  type: AutomateRunTriggerType
+}
+
 export type VersionMutations = {
   __typename?: 'VersionMutations'
+  create: Version
   delete: Scalars['Boolean']['output']
+  markReceived: Scalars['Boolean']['output']
   moveToModel: Model
+  requestGendoAIRender: Scalars['Boolean']['output']
   update: Version
+}
+
+export type VersionMutationsCreateArgs = {
+  input: CreateVersionInput
 }
 
 export type VersionMutationsDeleteArgs = {
   input: DeleteVersionsInput
 }
 
+export type VersionMutationsMarkReceivedArgs = {
+  input: MarkReceivedVersionInput
+}
+
 export type VersionMutationsMoveToModelArgs = {
   input: MoveVersionsInput
+}
+
+export type VersionMutationsRequestGendoAiRenderArgs = {
+  input: GendoAiRenderInput
 }
 
 export type VersionMutationsUpdateArgs = {
@@ -2710,7 +3640,7 @@ export type WebhookCreateInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>
   secret?: InputMaybe<Scalars['String']['input']>
   streamId: Scalars['String']['input']
-  triggers: Array<InputMaybe<Scalars['String']['input']>>
+  triggers: Array<Scalars['String']['input']>
   url: Scalars['String']['input']
 }
 
@@ -2742,8 +3672,318 @@ export type WebhookUpdateInput = {
   id: Scalars['String']['input']
   secret?: InputMaybe<Scalars['String']['input']>
   streamId: Scalars['String']['input']
-  triggers?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>
+  triggers?: InputMaybe<Array<Scalars['String']['input']>>
   url?: InputMaybe<Scalars['String']['input']>
+}
+
+export type Workspace = {
+  __typename?: 'Workspace'
+  /** Billing data for Workspaces beta */
+  billing?: Maybe<WorkspaceBilling>
+  createdAt: Scalars['DateTime']['output']
+  /** Selected fallback when `logo` not set */
+  defaultLogoIndex: Scalars['Int']['output']
+  /** The default role workspace members will receive for workspace projects. */
+  defaultProjectRole: Scalars['String']['output']
+  description?: Maybe<Scalars['String']['output']>
+  /** Enable/Disable discovery of the workspace */
+  discoverabilityEnabled: Scalars['Boolean']['output']
+  /** Enable/Disable restriction to invite users to workspace as Guests only */
+  domainBasedMembershipProtectionEnabled: Scalars['Boolean']['output']
+  /** Verified workspace domains */
+  domains?: Maybe<Array<WorkspaceDomain>>
+  id: Scalars['ID']['output']
+  /** Only available to workspace owners/members */
+  invitedTeam?: Maybe<Array<PendingWorkspaceCollaborator>>
+  /** Logo image as base64-encoded string */
+  logo?: Maybe<Scalars['String']['output']>
+  name: Scalars['String']['output']
+  projects: ProjectCollection
+  /** Active user's role for this workspace. `null` if request is not authenticated, or the workspace is not explicitly shared with you. */
+  role?: Maybe<Scalars['String']['output']>
+  slug: Scalars['String']['output']
+  team: WorkspaceCollaboratorCollection
+  updatedAt: Scalars['DateTime']['output']
+}
+
+export type WorkspaceInvitedTeamArgs = {
+  filter?: InputMaybe<PendingWorkspaceCollaboratorsFilter>
+}
+
+export type WorkspaceProjectsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<WorkspaceProjectsFilter>
+  limit?: Scalars['Int']['input']
+}
+
+export type WorkspaceTeamArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>
+  filter?: InputMaybe<WorkspaceTeamFilter>
+  limit?: Scalars['Int']['input']
+}
+
+export type WorkspaceBilling = {
+  __typename?: 'WorkspaceBilling'
+  cost: WorkspaceCost
+  versionsCount: WorkspaceVersionsCount
+}
+
+/** Overridden by `WorkspaceCollaboratorGraphQLReturn` */
+export type WorkspaceCollaborator = {
+  __typename?: 'WorkspaceCollaborator'
+  id: Scalars['ID']['output']
+  projectRoles: Array<ProjectRole>
+  role: Scalars['String']['output']
+  user: LimitedUser
+}
+
+export type WorkspaceCollaboratorCollection = {
+  __typename?: 'WorkspaceCollaboratorCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<WorkspaceCollaborator>
+  totalCount: Scalars['Int']['output']
+}
+
+export type WorkspaceCollection = {
+  __typename?: 'WorkspaceCollection'
+  cursor?: Maybe<Scalars['String']['output']>
+  items: Array<Workspace>
+  totalCount: Scalars['Int']['output']
+}
+
+export type WorkspaceCost = {
+  __typename?: 'WorkspaceCost'
+  /** Currency of the price */
+  currency: Currency
+  /** Discount applied to the total */
+  discount?: Maybe<WorkspaceCostDiscount>
+  items: Array<WorkspaceCostItem>
+  /** Estimated cost of the workspace with no discount applied */
+  subTotal: Scalars['Float']['output']
+  /** Total cost with discount applied */
+  total: Scalars['Float']['output']
+}
+
+export type WorkspaceCostDiscount = {
+  __typename?: 'WorkspaceCostDiscount'
+  amount: Scalars['Float']['output']
+  name: Scalars['String']['output']
+}
+
+export type WorkspaceCostItem = {
+  __typename?: 'WorkspaceCostItem'
+  cost: Scalars['Float']['output']
+  count: Scalars['Int']['output']
+  label: Scalars['String']['output']
+  name: Scalars['String']['output']
+}
+
+export type WorkspaceCreateInput = {
+  defaultLogoIndex?: InputMaybe<Scalars['Int']['input']>
+  description?: InputMaybe<Scalars['String']['input']>
+  /** Logo image as base64-encoded string */
+  logo?: InputMaybe<Scalars['String']['input']>
+  name: Scalars['String']['input']
+  slug?: InputMaybe<Scalars['String']['input']>
+}
+
+export type WorkspaceDomain = {
+  __typename?: 'WorkspaceDomain'
+  domain: Scalars['String']['output']
+  id: Scalars['ID']['output']
+}
+
+export type WorkspaceDomainDeleteInput = {
+  id: Scalars['ID']['input']
+  workspaceId: Scalars['ID']['input']
+}
+
+export type WorkspaceInviteCreateInput = {
+  /** Either this or userId must be filled */
+  email?: InputMaybe<Scalars['String']['input']>
+  /** Defaults to the member role, if not specified */
+  role?: InputMaybe<WorkspaceRole>
+  /** Defaults to User, if not specified */
+  serverRole?: InputMaybe<ServerRole>
+  /** Either this or email must be filled */
+  userId?: InputMaybe<Scalars['String']['input']>
+}
+
+export type WorkspaceInviteLookupOptions = {
+  /** If true, the query will assume workspaceId is actually the workspace slug, and do the lookup by slug */
+  useSlug?: InputMaybe<Scalars['Boolean']['input']>
+}
+
+export type WorkspaceInviteMutations = {
+  __typename?: 'WorkspaceInviteMutations'
+  batchCreate: Workspace
+  cancel: Workspace
+  create: Workspace
+  resend: Scalars['Boolean']['output']
+  use: Scalars['Boolean']['output']
+}
+
+export type WorkspaceInviteMutationsBatchCreateArgs = {
+  input: Array<WorkspaceInviteCreateInput>
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceInviteMutationsCancelArgs = {
+  inviteId: Scalars['String']['input']
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceInviteMutationsCreateArgs = {
+  input: WorkspaceInviteCreateInput
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceInviteMutationsResendArgs = {
+  input: WorkspaceInviteResendInput
+}
+
+export type WorkspaceInviteMutationsUseArgs = {
+  input: WorkspaceInviteUseInput
+}
+
+export type WorkspaceInviteResendInput = {
+  inviteId: Scalars['String']['input']
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceInviteUseInput = {
+  accept: Scalars['Boolean']['input']
+  /**
+   * If invite is attached to an unregistered email, the invite can only be used if this is set to true.
+   * Upon accepting such an invite, the unregistered email will be added to the user's account as well.
+   */
+  addNewEmail?: InputMaybe<Scalars['Boolean']['input']>
+  token: Scalars['String']['input']
+}
+
+export type WorkspaceMutations = {
+  __typename?: 'WorkspaceMutations'
+  addDomain: Workspace
+  create: Workspace
+  delete: Scalars['Boolean']['output']
+  deleteDomain: Workspace
+  invites: WorkspaceInviteMutations
+  join: Workspace
+  leave: Scalars['Boolean']['output']
+  projects: WorkspaceProjectMutations
+  update: Workspace
+  updateRole: Workspace
+}
+
+export type WorkspaceMutationsAddDomainArgs = {
+  input: AddDomainToWorkspaceInput
+}
+
+export type WorkspaceMutationsCreateArgs = {
+  input: WorkspaceCreateInput
+}
+
+export type WorkspaceMutationsDeleteArgs = {
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceMutationsDeleteDomainArgs = {
+  input: WorkspaceDomainDeleteInput
+}
+
+export type WorkspaceMutationsJoinArgs = {
+  input: JoinWorkspaceInput
+}
+
+export type WorkspaceMutationsLeaveArgs = {
+  id: Scalars['ID']['input']
+}
+
+export type WorkspaceMutationsUpdateArgs = {
+  input: WorkspaceUpdateInput
+}
+
+export type WorkspaceMutationsUpdateRoleArgs = {
+  input: WorkspaceRoleUpdateInput
+}
+
+export type WorkspaceProjectInviteCreateInput = {
+  /** Either this or userId must be filled */
+  email?: InputMaybe<Scalars['String']['input']>
+  /** Defaults to the contributor role, if not specified */
+  role?: InputMaybe<Scalars['String']['input']>
+  /** Can only be specified if guest mode is on or if the user is an admin */
+  serverRole?: InputMaybe<Scalars['String']['input']>
+  /** Either this or email must be filled */
+  userId?: InputMaybe<Scalars['String']['input']>
+  /** Only taken into account, if project belongs to a workspace. Defaults to guest access. */
+  workspaceRole?: InputMaybe<Scalars['String']['input']>
+}
+
+export type WorkspaceProjectMutations = {
+  __typename?: 'WorkspaceProjectMutations'
+  moveToWorkspace: Project
+  updateRole: Project
+}
+
+export type WorkspaceProjectMutationsMoveToWorkspaceArgs = {
+  projectId: Scalars['String']['input']
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceProjectMutationsUpdateRoleArgs = {
+  input: ProjectUpdateRoleInput
+}
+
+export type WorkspaceProjectsFilter = {
+  /** Filter out projects by name */
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
+export enum WorkspaceRole {
+  Admin = 'ADMIN',
+  Guest = 'GUEST',
+  Member = 'MEMBER',
+}
+
+export type WorkspaceRoleDeleteInput = {
+  userId: Scalars['String']['input']
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceRoleUpdateInput = {
+  /** Leave role null to revoke access entirely */
+  role?: InputMaybe<Scalars['String']['input']>
+  userId: Scalars['String']['input']
+  workspaceId: Scalars['String']['input']
+}
+
+export type WorkspaceTeamFilter = {
+  /** Limit team members to provided role */
+  role?: InputMaybe<Scalars['String']['input']>
+  /** Search for team members by name or email */
+  search?: InputMaybe<Scalars['String']['input']>
+}
+
+export type WorkspaceUpdateInput = {
+  defaultLogoIndex?: InputMaybe<Scalars['Int']['input']>
+  defaultProjectRole?: InputMaybe<Scalars['String']['input']>
+  description?: InputMaybe<Scalars['String']['input']>
+  discoverabilityEnabled?: InputMaybe<Scalars['Boolean']['input']>
+  domainBasedMembershipProtectionEnabled?: InputMaybe<Scalars['Boolean']['input']>
+  id: Scalars['String']['input']
+  /** Logo image as base64-encoded string */
+  logo?: InputMaybe<Scalars['String']['input']>
+  name?: InputMaybe<Scalars['String']['input']>
+  slug?: InputMaybe<Scalars['String']['input']>
+}
+
+export type WorkspaceVersionsCount = {
+  __typename?: 'WorkspaceVersionsCount'
+  /** Total number of versions of all projects in the workspace */
+  current: Scalars['Int']['output']
+  /** Maximum number of version of all projects in the workspace with no additional cost */
+  max: Scalars['Int']['output']
 }
 
 export type ResolverTypeWrapper<T> = Promise<T> | T
@@ -2816,40 +4056,111 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
   info: GraphQLResolveInfo,
 ) => TResult | Promise<TResult>
 
+/** Mapping of union types */
+export type ResolversUnionTypes<_RefType extends Record<string, unknown>> = {
+  AutomationRevisionTriggerDefinition: Omit<VersionCreatedTriggerDefinition, 'model'> & {
+    model?: Maybe<_RefType['Model']>
+  }
+  AutomationRunTrigger: Omit<VersionCreatedTrigger, 'model' | 'version'> & {
+    model?: Maybe<_RefType['Model']>
+    version?: Maybe<_RefType['Version']>
+  }
+}
+
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = {
-  ActiveUserMutations: ResolverTypeWrapper<ActiveUserMutations>
+  ActiveUserMutations: ResolverTypeWrapper<
+    Omit<ActiveUserMutations, 'emailMutations' | 'update'> & {
+      emailMutations: ResolversTypes['UserEmailMutations']
+      update: ResolversTypes['User']
+    }
+  >
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>
   Activity: ResolverTypeWrapper<Activity>
   String: ResolverTypeWrapper<Scalars['String']['output']>
   ID: ResolverTypeWrapper<Scalars['ID']['output']>
   ActivityCollection: ResolverTypeWrapper<ActivityCollection>
   Int: ResolverTypeWrapper<Scalars['Int']['output']>
+  AddDomainToWorkspaceInput: AddDomainToWorkspaceInput
   AdminInviteList: ResolverTypeWrapper<AdminInviteList>
-  AdminQueries: ResolverTypeWrapper<AdminQueries>
+  AdminQueries: ResolverTypeWrapper<
+    Omit<AdminQueries, 'projectList' | 'workspaceList'> & {
+      projectList: ResolversTypes['ProjectCollection']
+      workspaceList: ResolversTypes['WorkspaceCollection']
+    }
+  >
   AdminUserList: ResolverTypeWrapper<AdminUserList>
   AdminUserListItem: ResolverTypeWrapper<AdminUserListItem>
-  AdminUsersListCollection: ResolverTypeWrapper<AdminUsersListCollection>
-  AdminUsersListItem: ResolverTypeWrapper<AdminUsersListItem>
+  AdminUsersListCollection: ResolverTypeWrapper<
+    Omit<AdminUsersListCollection, 'items'> & { items: Array<ResolversTypes['AdminUsersListItem']> }
+  >
+  AdminUsersListItem: ResolverTypeWrapper<
+    Omit<AdminUsersListItem, 'registeredUser'> & { registeredUser?: Maybe<ResolversTypes['User']> }
+  >
   ApiToken: ResolverTypeWrapper<ApiToken>
   ApiTokenCreateInput: ApiTokenCreateInput
   AppAuthor: ResolverTypeWrapper<AppAuthor>
   AppCreateInput: AppCreateInput
+  AppTokenCreateInput: AppTokenCreateInput
   AppUpdateInput: AppUpdateInput
   AuthStrategy: ResolverTypeWrapper<AuthStrategy>
-  AutomationCreateInput: AutomationCreateInput
-  AutomationFunctionRun: ResolverTypeWrapper<AutomationFunctionRun>
+  AutomateAuthCodePayloadTest: AutomateAuthCodePayloadTest
+  AutomateFunction: ResolverTypeWrapper<AutomateFunction>
+  AutomateFunctionCollection: ResolverTypeWrapper<AutomateFunctionCollection>
+  AutomateFunctionRelease: ResolverTypeWrapper<AutomateFunctionRelease>
+  AutomateFunctionReleaseCollection: ResolverTypeWrapper<AutomateFunctionReleaseCollection>
+  AutomateFunctionReleasesFilter: AutomateFunctionReleasesFilter
+  AutomateFunctionRun: ResolverTypeWrapper<AutomateFunctionRun>
   Float: ResolverTypeWrapper<Scalars['Float']['output']>
-  AutomationMutations: ResolverTypeWrapper<AutomationMutations>
-  AutomationRun: ResolverTypeWrapper<AutomationRun>
-  AutomationRunStatus: AutomationRunStatus
-  AutomationRunStatusUpdateInput: AutomationRunStatusUpdateInput
-  AutomationsStatus: ResolverTypeWrapper<AutomationsStatus>
+  AutomateFunctionRunStatusReportInput: AutomateFunctionRunStatusReportInput
+  AutomateFunctionTemplate: ResolverTypeWrapper<AutomateFunctionTemplate>
+  AutomateFunctionTemplateLanguage: AutomateFunctionTemplateLanguage
+  AutomateFunctionsFilter: AutomateFunctionsFilter
+  AutomateMutations: ResolverTypeWrapper<AutomateMutations>
+  AutomateRun: ResolverTypeWrapper<
+    Omit<AutomateRun, 'automation' | 'trigger'> & {
+      automation: ResolversTypes['Automation']
+      trigger: ResolversTypes['AutomationRunTrigger']
+    }
+  >
+  AutomateRunCollection: ResolverTypeWrapper<
+    Omit<AutomateRunCollection, 'items'> & { items: Array<ResolversTypes['AutomateRun']> }
+  >
+  AutomateRunStatus: AutomateRunStatus
+  AutomateRunTriggerType: AutomateRunTriggerType
+  Automation: ResolverTypeWrapper<
+    Omit<Automation, 'currentRevision'> & { currentRevision?: Maybe<ResolversTypes['AutomationRevision']> }
+  >
+  AutomationCollection: ResolverTypeWrapper<
+    Omit<AutomationCollection, 'items'> & { items: Array<ResolversTypes['Automation']> }
+  >
+  AutomationRevision: ResolverTypeWrapper<
+    Omit<AutomationRevision, 'triggerDefinitions'> & {
+      triggerDefinitions: Array<ResolversTypes['AutomationRevisionTriggerDefinition']>
+    }
+  >
+  AutomationRevisionCreateFunctionInput: AutomationRevisionCreateFunctionInput
+  AutomationRevisionFunction: ResolverTypeWrapper<AutomationRevisionFunction>
+  AutomationRevisionTriggerDefinition: ResolverTypeWrapper<
+    ResolversUnionTypes<ResolversTypes>['AutomationRevisionTriggerDefinition']
+  >
+  AutomationRunTrigger: ResolverTypeWrapper<ResolversUnionTypes<ResolversTypes>['AutomationRunTrigger']>
+  AvatarUser: ResolverTypeWrapper<AvatarUser>
+  BasicGitRepositoryMetadata: ResolverTypeWrapper<BasicGitRepositoryMetadata>
   BigInt: ResolverTypeWrapper<Scalars['BigInt']['output']>
   BlobMetadata: ResolverTypeWrapper<BlobMetadata>
-  BlobMetadataCollection: ResolverTypeWrapper<BlobMetadataCollection>
-  Branch: ResolverTypeWrapper<Branch>
-  BranchCollection: ResolverTypeWrapper<BranchCollection>
+  BlobMetadataCollection: ResolverTypeWrapper<
+    Omit<BlobMetadataCollection, 'items'> & { items?: Maybe<Array<ResolversTypes['BlobMetadata']>> }
+  >
+  Branch: ResolverTypeWrapper<
+    Omit<Branch, 'author' | 'commits'> & {
+      author?: Maybe<ResolversTypes['User']>
+      commits?: Maybe<ResolversTypes['CommitCollection']>
+    }
+  >
+  BranchCollection: ResolverTypeWrapper<
+    Omit<BranchCollection, 'items'> & { items?: Maybe<Array<ResolversTypes['Branch']>> }
+  >
   BranchCreateInput: BranchCreateInput
   BranchDeleteInput: BranchDeleteInput
   BranchUpdateInput: BranchUpdateInput
@@ -2864,35 +4175,69 @@ export type ResolversTypes = {
   CommentMutations: ResolverTypeWrapper<CommentMutations>
   CommentReplyAuthorCollection: ResolverTypeWrapper<CommentReplyAuthorCollection>
   CommentThreadActivityMessage: ResolverTypeWrapper<CommentThreadActivityMessage>
-  Commit: ResolverTypeWrapper<Commit>
-  CommitCollection: ResolverTypeWrapper<CommitCollection>
+  Commit: ResolverTypeWrapper<
+    Omit<Commit, 'branch' | 'stream'> & { branch?: Maybe<ResolversTypes['Branch']>; stream: ResolversTypes['Stream'] }
+  >
+  CommitCollection: ResolverTypeWrapper<
+    Omit<CommitCollection, 'items'> & { items?: Maybe<Array<ResolversTypes['Commit']>> }
+  >
   CommitCreateInput: CommitCreateInput
   CommitDeleteInput: CommitDeleteInput
   CommitReceivedInput: CommitReceivedInput
   CommitUpdateInput: CommitUpdateInput
   CommitsDeleteInput: CommitsDeleteInput
   CommitsMoveInput: CommitsMoveInput
+  CountOnlyCollection: ResolverTypeWrapper<CountOnlyCollection>
+  CreateAutomateFunctionInput: CreateAutomateFunctionInput
   CreateCommentInput: CreateCommentInput
   CreateCommentReplyInput: CreateCommentReplyInput
   CreateModelInput: CreateModelInput
+  CreateUserEmailInput: CreateUserEmailInput
+  CreateVersionInput: CreateVersionInput
+  Currency: Currency
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>
   DeleteModelInput: DeleteModelInput
+  DeleteUserEmailInput: DeleteUserEmailInput
   DeleteVersionsInput: DeleteVersionsInput
   DiscoverableStreamsSortType: DiscoverableStreamsSortType
   DiscoverableStreamsSortingInput: DiscoverableStreamsSortingInput
+  DiscoverableWorkspace: ResolverTypeWrapper<DiscoverableWorkspace>
   EditCommentInput: EditCommentInput
-  EmailAddress: ResolverTypeWrapper<Scalars['EmailAddress']['output']>
-  FileUpload: ResolverTypeWrapper<FileUpload>
-  FunctionRunStatusInput: FunctionRunStatusInput
+  EmailVerificationRequestInput: EmailVerificationRequestInput
+  FileUpload: ResolverTypeWrapper<Omit<FileUpload, 'model'> & { model?: Maybe<ResolversTypes['Model']> }>
+  GendoAIRender: ResolverTypeWrapper<GendoAiRender>
+  GendoAIRenderCollection: ResolverTypeWrapper<GendoAiRenderCollection>
+  GendoAIRenderInput: GendoAiRenderInput
   JSONObject: ResolverTypeWrapper<Scalars['JSONObject']['output']>
+  JoinWorkspaceInput: JoinWorkspaceInput
   LegacyCommentViewerData: ResolverTypeWrapper<LegacyCommentViewerData>
-  LimitedUser: ResolverTypeWrapper<LimitedUser>
-  Model: ResolverTypeWrapper<Model>
-  ModelCollection: ResolverTypeWrapper<ModelCollection>
-  ModelMutations: ResolverTypeWrapper<ModelMutations>
+  LimitedUser: ResolverTypeWrapper<
+    Omit<LimitedUser, 'commits'> & { commits?: Maybe<ResolversTypes['CommitCollection']> }
+  >
+  MarkReceivedVersionInput: MarkReceivedVersionInput
+  Model: ResolverTypeWrapper<
+    Omit<Model, 'automationsStatus' | 'childrenTree' | 'pendingImportedVersions' | 'version' | 'versions'> & {
+      automationsStatus?: Maybe<ResolversTypes['TriggeredAutomationsStatus']>
+      childrenTree: Array<ResolversTypes['ModelsTreeItem']>
+      pendingImportedVersions: Array<ResolversTypes['FileUpload']>
+      version: ResolversTypes['Version']
+      versions: ResolversTypes['VersionCollection']
+    }
+  >
+  ModelCollection: ResolverTypeWrapper<Omit<ModelCollection, 'items'> & { items: Array<ResolversTypes['Model']> }>
+  ModelMutations: ResolverTypeWrapper<
+    Omit<ModelMutations, 'create' | 'update'> & { create: ResolversTypes['Model']; update: ResolversTypes['Model'] }
+  >
   ModelVersionsFilter: ModelVersionsFilter
-  ModelsTreeItem: ResolverTypeWrapper<ModelsTreeItem>
-  ModelsTreeItemCollection: ResolverTypeWrapper<ModelsTreeItemCollection>
+  ModelsTreeItem: ResolverTypeWrapper<
+    Omit<ModelsTreeItem, 'children' | 'model'> & {
+      children: Array<ResolversTypes['ModelsTreeItem']>
+      model?: Maybe<ResolversTypes['Model']>
+    }
+  >
+  ModelsTreeItemCollection: ResolverTypeWrapper<
+    Omit<ModelsTreeItemCollection, 'items'> & { items: Array<ResolversTypes['ModelsTreeItem']> }
+  >
   MoveVersionsInput: MoveVersionsInput
   Mutation: ResolverTypeWrapper<{}>
   Object: ResolverTypeWrapper<Object>
@@ -2901,35 +4246,143 @@ export type ResolversTypes = {
   PasswordStrengthCheckFeedback: ResolverTypeWrapper<PasswordStrengthCheckFeedback>
   PasswordStrengthCheckResults: ResolverTypeWrapper<PasswordStrengthCheckResults>
   PendingStreamCollaborator: ResolverTypeWrapper<PendingStreamCollaborator>
-  Project: ResolverTypeWrapper<Project>
-  ProjectAutomationsStatusUpdatedMessage: ResolverTypeWrapper<ProjectAutomationsStatusUpdatedMessage>
+  PendingWorkspaceCollaborator: ResolverTypeWrapper<PendingWorkspaceCollaborator>
+  PendingWorkspaceCollaboratorsFilter: PendingWorkspaceCollaboratorsFilter
+  Project: ResolverTypeWrapper<
+    Omit<
+      Project,
+      | 'automation'
+      | 'automations'
+      | 'blob'
+      | 'model'
+      | 'modelByName'
+      | 'modelChildrenTree'
+      | 'models'
+      | 'modelsTree'
+      | 'pendingAccessRequests'
+      | 'pendingImportedModels'
+      | 'version'
+      | 'versions'
+      | 'workspace'
+    > & {
+      automation: ResolversTypes['Automation']
+      automations: ResolversTypes['AutomationCollection']
+      blob?: Maybe<ResolversTypes['BlobMetadata']>
+      model: ResolversTypes['Model']
+      modelByName: ResolversTypes['Model']
+      modelChildrenTree: Array<ResolversTypes['ModelsTreeItem']>
+      models: ResolversTypes['ModelCollection']
+      modelsTree: ResolversTypes['ModelsTreeItemCollection']
+      pendingAccessRequests?: Maybe<Array<ResolversTypes['ProjectAccessRequest']>>
+      pendingImportedModels: Array<ResolversTypes['FileUpload']>
+      version?: Maybe<ResolversTypes['Version']>
+      versions: ResolversTypes['VersionCollection']
+      workspace?: Maybe<ResolversTypes['Workspace']>
+    }
+  >
+  ProjectAccessRequest: ResolverTypeWrapper<
+    Omit<ProjectAccessRequest, 'project'> & { project: ResolversTypes['Project'] }
+  >
+  ProjectAccessRequestMutations: ResolverTypeWrapper<
+    Omit<ProjectAccessRequestMutations, 'create' | 'use'> & {
+      create: ResolversTypes['ProjectAccessRequest']
+      use: ResolversTypes['Project']
+    }
+  >
+  ProjectAutomationCreateInput: ProjectAutomationCreateInput
+  ProjectAutomationMutations: ResolverTypeWrapper<
+    Omit<ProjectAutomationMutations, 'create' | 'createRevision' | 'createTestAutomation' | 'update'> & {
+      create: ResolversTypes['Automation']
+      createRevision: ResolversTypes['AutomationRevision']
+      createTestAutomation: ResolversTypes['Automation']
+      update: ResolversTypes['Automation']
+    }
+  >
+  ProjectAutomationRevisionCreateInput: ProjectAutomationRevisionCreateInput
+  ProjectAutomationUpdateInput: ProjectAutomationUpdateInput
+  ProjectAutomationsUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectAutomationsUpdatedMessage, 'automation' | 'revision'> & {
+      automation?: Maybe<ResolversTypes['Automation']>
+      revision?: Maybe<ResolversTypes['AutomationRevision']>
+    }
+  >
+  ProjectAutomationsUpdatedMessageType: ProjectAutomationsUpdatedMessageType
   ProjectCollaborator: ResolverTypeWrapper<ProjectCollaborator>
-  ProjectCollection: ResolverTypeWrapper<ProjectCollection>
+  ProjectCollection: ResolverTypeWrapper<Omit<ProjectCollection, 'items'> & { items: Array<ResolversTypes['Project']> }>
   ProjectCommentCollection: ResolverTypeWrapper<ProjectCommentCollection>
   ProjectCommentsFilter: ProjectCommentsFilter
   ProjectCommentsUpdatedMessage: ResolverTypeWrapper<ProjectCommentsUpdatedMessage>
   ProjectCommentsUpdatedMessageType: ProjectCommentsUpdatedMessageType
   ProjectCreateInput: ProjectCreateInput
-  ProjectFileImportUpdatedMessage: ResolverTypeWrapper<ProjectFileImportUpdatedMessage>
+  ProjectFileImportUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectFileImportUpdatedMessage, 'upload'> & { upload: ResolversTypes['FileUpload'] }
+  >
   ProjectFileImportUpdatedMessageType: ProjectFileImportUpdatedMessageType
   ProjectInviteCreateInput: ProjectInviteCreateInput
-  ProjectInviteMutations: ResolverTypeWrapper<ProjectInviteMutations>
+  ProjectInviteMutations: ResolverTypeWrapper<
+    Omit<ProjectInviteMutations, 'batchCreate' | 'cancel' | 'create' | 'createForWorkspace'> & {
+      batchCreate: ResolversTypes['Project']
+      cancel: ResolversTypes['Project']
+      create: ResolversTypes['Project']
+      createForWorkspace: ResolversTypes['Project']
+    }
+  >
   ProjectInviteUseInput: ProjectInviteUseInput
   ProjectModelsFilter: ProjectModelsFilter
   ProjectModelsTreeFilter: ProjectModelsTreeFilter
-  ProjectModelsUpdatedMessage: ResolverTypeWrapper<ProjectModelsUpdatedMessage>
+  ProjectModelsUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectModelsUpdatedMessage, 'model'> & { model?: Maybe<ResolversTypes['Model']> }
+  >
   ProjectModelsUpdatedMessageType: ProjectModelsUpdatedMessageType
-  ProjectMutations: ResolverTypeWrapper<ProjectMutations>
-  ProjectPendingModelsUpdatedMessage: ResolverTypeWrapper<ProjectPendingModelsUpdatedMessage>
+  ProjectMutations: ResolverTypeWrapper<
+    Omit<
+      ProjectMutations,
+      | 'accessRequestMutations'
+      | 'automationMutations'
+      | 'create'
+      | 'createForOnboarding'
+      | 'invites'
+      | 'update'
+      | 'updateRole'
+    > & {
+      accessRequestMutations: ResolversTypes['ProjectAccessRequestMutations']
+      automationMutations: ResolversTypes['ProjectAutomationMutations']
+      create: ResolversTypes['Project']
+      createForOnboarding: ResolversTypes['Project']
+      invites: ResolversTypes['ProjectInviteMutations']
+      update: ResolversTypes['Project']
+      updateRole: ResolversTypes['Project']
+    }
+  >
+  ProjectPendingModelsUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectPendingModelsUpdatedMessage, 'model'> & { model: ResolversTypes['FileUpload'] }
+  >
   ProjectPendingModelsUpdatedMessageType: ProjectPendingModelsUpdatedMessageType
-  ProjectPendingVersionsUpdatedMessage: ResolverTypeWrapper<ProjectPendingVersionsUpdatedMessage>
+  ProjectPendingVersionsUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectPendingVersionsUpdatedMessage, 'version'> & { version: ResolversTypes['FileUpload'] }
+  >
   ProjectPendingVersionsUpdatedMessageType: ProjectPendingVersionsUpdatedMessageType
+  ProjectRole: ResolverTypeWrapper<Omit<ProjectRole, 'project'> & { project: ResolversTypes['Project'] }>
+  ProjectTestAutomationCreateInput: ProjectTestAutomationCreateInput
+  ProjectTriggeredAutomationsStatusUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectTriggeredAutomationsStatusUpdatedMessage, 'model' | 'project' | 'run' | 'version'> & {
+      model: ResolversTypes['Model']
+      project: ResolversTypes['Project']
+      run: ResolversTypes['AutomateRun']
+      version: ResolversTypes['Version']
+    }
+  >
+  ProjectTriggeredAutomationsStatusUpdatedMessageType: ProjectTriggeredAutomationsStatusUpdatedMessageType
   ProjectUpdateInput: ProjectUpdateInput
   ProjectUpdateRoleInput: ProjectUpdateRoleInput
-  ProjectUpdatedMessage: ResolverTypeWrapper<ProjectUpdatedMessage>
+  ProjectUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectUpdatedMessage, 'project'> & { project?: Maybe<ResolversTypes['Project']> }
+  >
   ProjectUpdatedMessageType: ProjectUpdatedMessageType
   ProjectVersionsPreviewGeneratedMessage: ResolverTypeWrapper<ProjectVersionsPreviewGeneratedMessage>
-  ProjectVersionsUpdatedMessage: ResolverTypeWrapper<ProjectVersionsUpdatedMessage>
+  ProjectVersionsUpdatedMessage: ResolverTypeWrapper<
+    Omit<ProjectVersionsUpdatedMessage, 'version'> & { version?: Maybe<ResolversTypes['Version']> }
+  >
   ProjectVersionsUpdatedMessageType: ProjectVersionsUpdatedMessageType
   ProjectVisibility: ProjectVisibility
   Query: ResolverTypeWrapper<{}>
@@ -2941,20 +4394,39 @@ export type ResolversTypes = {
   Scope: ResolverTypeWrapper<Scope>
   ServerApp: ResolverTypeWrapper<ServerApp>
   ServerAppListItem: ResolverTypeWrapper<ServerAppListItem>
+  ServerAutomateInfo: ResolverTypeWrapper<ServerAutomateInfo>
+  ServerConfiguration: ResolverTypeWrapper<ServerConfiguration>
   ServerInfo: ResolverTypeWrapper<ServerInfo>
   ServerInfoUpdateInput: ServerInfoUpdateInput
   ServerInvite: ResolverTypeWrapper<ServerInvite>
   ServerInviteCreateInput: ServerInviteCreateInput
+  ServerMigration: ResolverTypeWrapper<ServerMigration>
   ServerRole: ServerRole
   ServerRoleItem: ResolverTypeWrapper<ServerRoleItem>
   ServerStatistics: ResolverTypeWrapper<ServerStatistics>
   ServerStats: ResolverTypeWrapper<ServerStats>
-  SmartTextEditorValue: ResolverTypeWrapper<SmartTextEditorValue>
+  ServerWorkspacesInfo: ResolverTypeWrapper<ServerWorkspacesInfo>
+  SetPrimaryUserEmailInput: SetPrimaryUserEmailInput
+  SmartTextEditorValue: ResolverTypeWrapper<
+    Omit<SmartTextEditorValue, 'attachments'> & { attachments?: Maybe<Array<ResolversTypes['BlobMetadata']>> }
+  >
   SortDirection: SortDirection
-  Stream: ResolverTypeWrapper<Stream>
-  StreamAccessRequest: ResolverTypeWrapper<StreamAccessRequest>
+  Stream: ResolverTypeWrapper<
+    Omit<Stream, 'blob' | 'branch' | 'commit' | 'commits' | 'fileUpload' | 'fileUploads' | 'pendingAccessRequests'> & {
+      blob?: Maybe<ResolversTypes['BlobMetadata']>
+      branch?: Maybe<ResolversTypes['Branch']>
+      commit?: Maybe<ResolversTypes['Commit']>
+      commits?: Maybe<ResolversTypes['CommitCollection']>
+      fileUpload?: Maybe<ResolversTypes['FileUpload']>
+      fileUploads: Array<ResolversTypes['FileUpload']>
+      pendingAccessRequests?: Maybe<Array<ResolversTypes['StreamAccessRequest']>>
+    }
+  >
+  StreamAccessRequest: ResolverTypeWrapper<Omit<StreamAccessRequest, 'stream'> & { stream: ResolversTypes['Stream'] }>
   StreamCollaborator: ResolverTypeWrapper<StreamCollaborator>
-  StreamCollection: ResolverTypeWrapper<StreamCollection>
+  StreamCollection: ResolverTypeWrapper<
+    Omit<StreamCollection, 'items'> & { items?: Maybe<Array<ResolversTypes['Stream']>> }
+  >
   StreamCreateInput: StreamCreateInput
   StreamInviteCreateInput: StreamInviteCreateInput
   StreamRevokePermissionInput: StreamRevokePermissionInput
@@ -2962,20 +4434,69 @@ export type ResolversTypes = {
   StreamUpdateInput: StreamUpdateInput
   StreamUpdatePermissionInput: StreamUpdatePermissionInput
   Subscription: ResolverTypeWrapper<{}>
-  TestItem: ResolverTypeWrapper<TestItem>
+  TestAutomationRun: ResolverTypeWrapper<TestAutomationRun>
+  TestAutomationRunTrigger: ResolverTypeWrapper<TestAutomationRunTrigger>
+  TestAutomationRunTriggerPayload: ResolverTypeWrapper<TestAutomationRunTriggerPayload>
+  TokenResourceIdentifier: ResolverTypeWrapper<TokenResourceIdentifier>
+  TokenResourceIdentifierInput: TokenResourceIdentifierInput
+  TokenResourceIdentifierType: TokenResourceIdentifierType
+  TriggeredAutomationsStatus: ResolverTypeWrapper<
+    Omit<TriggeredAutomationsStatus, 'automationRuns'> & { automationRuns: Array<ResolversTypes['AutomateRun']> }
+  >
+  UpdateAutomateFunctionInput: UpdateAutomateFunctionInput
   UpdateModelInput: UpdateModelInput
   UpdateVersionInput: UpdateVersionInput
-  User: ResolverTypeWrapper<User>
+  User: ResolverTypeWrapper<
+    Omit<User, 'apiTokens' | 'commits' | 'projectAccessRequest' | 'projects' | 'workspaces'> & {
+      apiTokens: Array<ResolversTypes['ApiToken']>
+      commits?: Maybe<ResolversTypes['CommitCollection']>
+      projectAccessRequest?: Maybe<ResolversTypes['ProjectAccessRequest']>
+      projects: ResolversTypes['ProjectCollection']
+      workspaces: ResolversTypes['WorkspaceCollection']
+    }
+  >
+  UserAutomateInfo: ResolverTypeWrapper<UserAutomateInfo>
   UserDeleteInput: UserDeleteInput
+  UserEmail: ResolverTypeWrapper<UserEmail>
+  UserEmailMutations: ResolverTypeWrapper<
+    Omit<UserEmailMutations, 'create' | 'delete' | 'setPrimary'> & {
+      create: ResolversTypes['User']
+      delete: ResolversTypes['User']
+      setPrimary: ResolversTypes['User']
+    }
+  >
   UserProjectsFilter: UserProjectsFilter
-  UserProjectsUpdatedMessage: ResolverTypeWrapper<UserProjectsUpdatedMessage>
+  UserProjectsUpdatedMessage: ResolverTypeWrapper<
+    Omit<UserProjectsUpdatedMessage, 'project'> & { project?: Maybe<ResolversTypes['Project']> }
+  >
   UserProjectsUpdatedMessageType: UserProjectsUpdatedMessageType
   UserRoleInput: UserRoleInput
   UserSearchResultCollection: ResolverTypeWrapper<UserSearchResultCollection>
   UserUpdateInput: UserUpdateInput
-  Version: ResolverTypeWrapper<Version>
-  VersionCollection: ResolverTypeWrapper<VersionCollection>
-  VersionMutations: ResolverTypeWrapper<VersionMutations>
+  UserWorkspacesFilter: UserWorkspacesFilter
+  Version: ResolverTypeWrapper<
+    Omit<Version, 'automationsStatus' | 'model'> & {
+      automationsStatus?: Maybe<ResolversTypes['TriggeredAutomationsStatus']>
+      model: ResolversTypes['Model']
+    }
+  >
+  VersionCollection: ResolverTypeWrapper<Omit<VersionCollection, 'items'> & { items: Array<ResolversTypes['Version']> }>
+  VersionCreatedTrigger: ResolverTypeWrapper<
+    Omit<VersionCreatedTrigger, 'model' | 'version'> & {
+      model?: Maybe<ResolversTypes['Model']>
+      version?: Maybe<ResolversTypes['Version']>
+    }
+  >
+  VersionCreatedTriggerDefinition: ResolverTypeWrapper<
+    Omit<VersionCreatedTriggerDefinition, 'model'> & { model?: Maybe<ResolversTypes['Model']> }
+  >
+  VersionMutations: ResolverTypeWrapper<
+    Omit<VersionMutations, 'create' | 'moveToModel' | 'update'> & {
+      create: ResolversTypes['Version']
+      moveToModel: ResolversTypes['Model']
+      update: ResolversTypes['Version']
+    }
+  >
   ViewerResourceGroup: ResolverTypeWrapper<ViewerResourceGroup>
   ViewerResourceItem: ResolverTypeWrapper<ViewerResourceItem>
   ViewerUpdateTrackingTarget: ViewerUpdateTrackingTarget
@@ -2989,41 +4510,144 @@ export type ResolversTypes = {
   WebhookEvent: ResolverTypeWrapper<WebhookEvent>
   WebhookEventCollection: ResolverTypeWrapper<WebhookEventCollection>
   WebhookUpdateInput: WebhookUpdateInput
+  Workspace: ResolverTypeWrapper<
+    Omit<Workspace, 'domains' | 'projects' | 'team'> & {
+      domains?: Maybe<Array<ResolversTypes['WorkspaceDomain']>>
+      projects: ResolversTypes['ProjectCollection']
+      team: ResolversTypes['WorkspaceCollaboratorCollection']
+    }
+  >
+  WorkspaceBilling: ResolverTypeWrapper<WorkspaceBilling>
+  WorkspaceCollaborator: ResolverTypeWrapper<
+    Omit<WorkspaceCollaborator, 'projectRoles'> & { projectRoles: Array<ResolversTypes['ProjectRole']> }
+  >
+  WorkspaceCollaboratorCollection: ResolverTypeWrapper<
+    Omit<WorkspaceCollaboratorCollection, 'items'> & { items: Array<ResolversTypes['WorkspaceCollaborator']> }
+  >
+  WorkspaceCollection: ResolverTypeWrapper<
+    Omit<WorkspaceCollection, 'items'> & { items: Array<ResolversTypes['Workspace']> }
+  >
+  WorkspaceCost: ResolverTypeWrapper<WorkspaceCost>
+  WorkspaceCostDiscount: ResolverTypeWrapper<WorkspaceCostDiscount>
+  WorkspaceCostItem: ResolverTypeWrapper<WorkspaceCostItem>
+  WorkspaceCreateInput: WorkspaceCreateInput
+  WorkspaceDomain: ResolverTypeWrapper<WorkspaceDomain>
+  WorkspaceDomainDeleteInput: WorkspaceDomainDeleteInput
+  WorkspaceInviteCreateInput: WorkspaceInviteCreateInput
+  WorkspaceInviteLookupOptions: WorkspaceInviteLookupOptions
+  WorkspaceInviteMutations: ResolverTypeWrapper<
+    Omit<WorkspaceInviteMutations, 'batchCreate' | 'cancel' | 'create'> & {
+      batchCreate: ResolversTypes['Workspace']
+      cancel: ResolversTypes['Workspace']
+      create: ResolversTypes['Workspace']
+    }
+  >
+  WorkspaceInviteResendInput: WorkspaceInviteResendInput
+  WorkspaceInviteUseInput: WorkspaceInviteUseInput
+  WorkspaceMutations: ResolverTypeWrapper<
+    Omit<
+      WorkspaceMutations,
+      'addDomain' | 'create' | 'deleteDomain' | 'invites' | 'join' | 'projects' | 'update' | 'updateRole'
+    > & {
+      addDomain: ResolversTypes['Workspace']
+      create: ResolversTypes['Workspace']
+      deleteDomain: ResolversTypes['Workspace']
+      invites: ResolversTypes['WorkspaceInviteMutations']
+      join: ResolversTypes['Workspace']
+      projects: ResolversTypes['WorkspaceProjectMutations']
+      update: ResolversTypes['Workspace']
+      updateRole: ResolversTypes['Workspace']
+    }
+  >
+  WorkspaceProjectInviteCreateInput: WorkspaceProjectInviteCreateInput
+  WorkspaceProjectMutations: ResolverTypeWrapper<
+    Omit<WorkspaceProjectMutations, 'moveToWorkspace' | 'updateRole'> & {
+      moveToWorkspace: ResolversTypes['Project']
+      updateRole: ResolversTypes['Project']
+    }
+  >
+  WorkspaceProjectsFilter: WorkspaceProjectsFilter
+  WorkspaceRole: WorkspaceRole
+  WorkspaceRoleDeleteInput: WorkspaceRoleDeleteInput
+  WorkspaceRoleUpdateInput: WorkspaceRoleUpdateInput
+  WorkspaceTeamFilter: WorkspaceTeamFilter
+  WorkspaceUpdateInput: WorkspaceUpdateInput
+  WorkspaceVersionsCount: ResolverTypeWrapper<WorkspaceVersionsCount>
 }
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = {
-  ActiveUserMutations: ActiveUserMutations
+  ActiveUserMutations: Omit<ActiveUserMutations, 'emailMutations' | 'update'> & {
+    emailMutations: ResolversParentTypes['UserEmailMutations']
+    update: ResolversParentTypes['User']
+  }
   Boolean: Scalars['Boolean']['output']
   Activity: Activity
   String: Scalars['String']['output']
   ID: Scalars['ID']['output']
   ActivityCollection: ActivityCollection
   Int: Scalars['Int']['output']
+  AddDomainToWorkspaceInput: AddDomainToWorkspaceInput
   AdminInviteList: AdminInviteList
-  AdminQueries: AdminQueries
+  AdminQueries: Omit<AdminQueries, 'projectList' | 'workspaceList'> & {
+    projectList: ResolversParentTypes['ProjectCollection']
+    workspaceList: ResolversParentTypes['WorkspaceCollection']
+  }
   AdminUserList: AdminUserList
   AdminUserListItem: AdminUserListItem
-  AdminUsersListCollection: AdminUsersListCollection
-  AdminUsersListItem: AdminUsersListItem
+  AdminUsersListCollection: Omit<AdminUsersListCollection, 'items'> & {
+    items: Array<ResolversParentTypes['AdminUsersListItem']>
+  }
+  AdminUsersListItem: Omit<AdminUsersListItem, 'registeredUser'> & {
+    registeredUser?: Maybe<ResolversParentTypes['User']>
+  }
   ApiToken: ApiToken
   ApiTokenCreateInput: ApiTokenCreateInput
   AppAuthor: AppAuthor
   AppCreateInput: AppCreateInput
+  AppTokenCreateInput: AppTokenCreateInput
   AppUpdateInput: AppUpdateInput
   AuthStrategy: AuthStrategy
-  AutomationCreateInput: AutomationCreateInput
-  AutomationFunctionRun: AutomationFunctionRun
+  AutomateAuthCodePayloadTest: AutomateAuthCodePayloadTest
+  AutomateFunction: AutomateFunction
+  AutomateFunctionCollection: AutomateFunctionCollection
+  AutomateFunctionRelease: AutomateFunctionRelease
+  AutomateFunctionReleaseCollection: AutomateFunctionReleaseCollection
+  AutomateFunctionReleasesFilter: AutomateFunctionReleasesFilter
+  AutomateFunctionRun: AutomateFunctionRun
   Float: Scalars['Float']['output']
-  AutomationMutations: AutomationMutations
-  AutomationRun: AutomationRun
-  AutomationRunStatusUpdateInput: AutomationRunStatusUpdateInput
-  AutomationsStatus: AutomationsStatus
+  AutomateFunctionRunStatusReportInput: AutomateFunctionRunStatusReportInput
+  AutomateFunctionTemplate: AutomateFunctionTemplate
+  AutomateFunctionsFilter: AutomateFunctionsFilter
+  AutomateMutations: AutomateMutations
+  AutomateRun: Omit<AutomateRun, 'automation' | 'trigger'> & {
+    automation: ResolversParentTypes['Automation']
+    trigger: ResolversParentTypes['AutomationRunTrigger']
+  }
+  AutomateRunCollection: Omit<AutomateRunCollection, 'items'> & { items: Array<ResolversParentTypes['AutomateRun']> }
+  Automation: Omit<Automation, 'currentRevision'> & {
+    currentRevision?: Maybe<ResolversParentTypes['AutomationRevision']>
+  }
+  AutomationCollection: Omit<AutomationCollection, 'items'> & { items: Array<ResolversParentTypes['Automation']> }
+  AutomationRevision: Omit<AutomationRevision, 'triggerDefinitions'> & {
+    triggerDefinitions: Array<ResolversParentTypes['AutomationRevisionTriggerDefinition']>
+  }
+  AutomationRevisionCreateFunctionInput: AutomationRevisionCreateFunctionInput
+  AutomationRevisionFunction: AutomationRevisionFunction
+  AutomationRevisionTriggerDefinition: ResolversUnionTypes<ResolversParentTypes>['AutomationRevisionTriggerDefinition']
+  AutomationRunTrigger: ResolversUnionTypes<ResolversParentTypes>['AutomationRunTrigger']
+  AvatarUser: AvatarUser
+  BasicGitRepositoryMetadata: BasicGitRepositoryMetadata
   BigInt: Scalars['BigInt']['output']
   BlobMetadata: BlobMetadata
-  BlobMetadataCollection: BlobMetadataCollection
-  Branch: Branch
-  BranchCollection: BranchCollection
+  BlobMetadataCollection: Omit<BlobMetadataCollection, 'items'> & {
+    items?: Maybe<Array<ResolversParentTypes['BlobMetadata']>>
+  }
+  Branch: Omit<Branch, 'author' | 'commits'> & {
+    author?: Maybe<ResolversParentTypes['User']>
+    commits?: Maybe<ResolversParentTypes['CommitCollection']>
+  }
+  BranchCollection: Omit<BranchCollection, 'items'> & { items?: Maybe<Array<ResolversParentTypes['Branch']>> }
   BranchCreateInput: BranchCreateInput
   BranchDeleteInput: BranchDeleteInput
   BranchUpdateInput: BranchUpdateInput
@@ -3038,34 +4662,61 @@ export type ResolversParentTypes = {
   CommentMutations: CommentMutations
   CommentReplyAuthorCollection: CommentReplyAuthorCollection
   CommentThreadActivityMessage: CommentThreadActivityMessage
-  Commit: Commit
-  CommitCollection: CommitCollection
+  Commit: Omit<Commit, 'branch' | 'stream'> & {
+    branch?: Maybe<ResolversParentTypes['Branch']>
+    stream: ResolversParentTypes['Stream']
+  }
+  CommitCollection: Omit<CommitCollection, 'items'> & { items?: Maybe<Array<ResolversParentTypes['Commit']>> }
   CommitCreateInput: CommitCreateInput
   CommitDeleteInput: CommitDeleteInput
   CommitReceivedInput: CommitReceivedInput
   CommitUpdateInput: CommitUpdateInput
   CommitsDeleteInput: CommitsDeleteInput
   CommitsMoveInput: CommitsMoveInput
+  CountOnlyCollection: CountOnlyCollection
+  CreateAutomateFunctionInput: CreateAutomateFunctionInput
   CreateCommentInput: CreateCommentInput
   CreateCommentReplyInput: CreateCommentReplyInput
   CreateModelInput: CreateModelInput
+  CreateUserEmailInput: CreateUserEmailInput
+  CreateVersionInput: CreateVersionInput
   DateTime: Scalars['DateTime']['output']
   DeleteModelInput: DeleteModelInput
+  DeleteUserEmailInput: DeleteUserEmailInput
   DeleteVersionsInput: DeleteVersionsInput
   DiscoverableStreamsSortingInput: DiscoverableStreamsSortingInput
+  DiscoverableWorkspace: DiscoverableWorkspace
   EditCommentInput: EditCommentInput
-  EmailAddress: Scalars['EmailAddress']['output']
-  FileUpload: FileUpload
-  FunctionRunStatusInput: FunctionRunStatusInput
+  EmailVerificationRequestInput: EmailVerificationRequestInput
+  FileUpload: Omit<FileUpload, 'model'> & { model?: Maybe<ResolversParentTypes['Model']> }
+  GendoAIRender: GendoAiRender
+  GendoAIRenderCollection: GendoAiRenderCollection
+  GendoAIRenderInput: GendoAiRenderInput
   JSONObject: Scalars['JSONObject']['output']
+  JoinWorkspaceInput: JoinWorkspaceInput
   LegacyCommentViewerData: LegacyCommentViewerData
-  LimitedUser: LimitedUser
-  Model: Model
-  ModelCollection: ModelCollection
-  ModelMutations: ModelMutations
+  LimitedUser: Omit<LimitedUser, 'commits'> & { commits?: Maybe<ResolversParentTypes['CommitCollection']> }
+  MarkReceivedVersionInput: MarkReceivedVersionInput
+  Model: Omit<Model, 'automationsStatus' | 'childrenTree' | 'pendingImportedVersions' | 'version' | 'versions'> & {
+    automationsStatus?: Maybe<ResolversParentTypes['TriggeredAutomationsStatus']>
+    childrenTree: Array<ResolversParentTypes['ModelsTreeItem']>
+    pendingImportedVersions: Array<ResolversParentTypes['FileUpload']>
+    version: ResolversParentTypes['Version']
+    versions: ResolversParentTypes['VersionCollection']
+  }
+  ModelCollection: Omit<ModelCollection, 'items'> & { items: Array<ResolversParentTypes['Model']> }
+  ModelMutations: Omit<ModelMutations, 'create' | 'update'> & {
+    create: ResolversParentTypes['Model']
+    update: ResolversParentTypes['Model']
+  }
   ModelVersionsFilter: ModelVersionsFilter
-  ModelsTreeItem: ModelsTreeItem
-  ModelsTreeItemCollection: ModelsTreeItemCollection
+  ModelsTreeItem: Omit<ModelsTreeItem, 'children' | 'model'> & {
+    children: Array<ResolversParentTypes['ModelsTreeItem']>
+    model?: Maybe<ResolversParentTypes['Model']>
+  }
+  ModelsTreeItemCollection: Omit<ModelsTreeItemCollection, 'items'> & {
+    items: Array<ResolversParentTypes['ModelsTreeItem']>
+  }
   MoveVersionsInput: MoveVersionsInput
   Mutation: {}
   Object: Object
@@ -3074,29 +4725,123 @@ export type ResolversParentTypes = {
   PasswordStrengthCheckFeedback: PasswordStrengthCheckFeedback
   PasswordStrengthCheckResults: PasswordStrengthCheckResults
   PendingStreamCollaborator: PendingStreamCollaborator
-  Project: Project
-  ProjectAutomationsStatusUpdatedMessage: ProjectAutomationsStatusUpdatedMessage
+  PendingWorkspaceCollaborator: PendingWorkspaceCollaborator
+  PendingWorkspaceCollaboratorsFilter: PendingWorkspaceCollaboratorsFilter
+  Project: Omit<
+    Project,
+    | 'automation'
+    | 'automations'
+    | 'blob'
+    | 'model'
+    | 'modelByName'
+    | 'modelChildrenTree'
+    | 'models'
+    | 'modelsTree'
+    | 'pendingAccessRequests'
+    | 'pendingImportedModels'
+    | 'version'
+    | 'versions'
+    | 'workspace'
+  > & {
+    automation: ResolversParentTypes['Automation']
+    automations: ResolversParentTypes['AutomationCollection']
+    blob?: Maybe<ResolversParentTypes['BlobMetadata']>
+    model: ResolversParentTypes['Model']
+    modelByName: ResolversParentTypes['Model']
+    modelChildrenTree: Array<ResolversParentTypes['ModelsTreeItem']>
+    models: ResolversParentTypes['ModelCollection']
+    modelsTree: ResolversParentTypes['ModelsTreeItemCollection']
+    pendingAccessRequests?: Maybe<Array<ResolversParentTypes['ProjectAccessRequest']>>
+    pendingImportedModels: Array<ResolversParentTypes['FileUpload']>
+    version?: Maybe<ResolversParentTypes['Version']>
+    versions: ResolversParentTypes['VersionCollection']
+    workspace?: Maybe<ResolversParentTypes['Workspace']>
+  }
+  ProjectAccessRequest: Omit<ProjectAccessRequest, 'project'> & { project: ResolversParentTypes['Project'] }
+  ProjectAccessRequestMutations: Omit<ProjectAccessRequestMutations, 'create' | 'use'> & {
+    create: ResolversParentTypes['ProjectAccessRequest']
+    use: ResolversParentTypes['Project']
+  }
+  ProjectAutomationCreateInput: ProjectAutomationCreateInput
+  ProjectAutomationMutations: Omit<
+    ProjectAutomationMutations,
+    'create' | 'createRevision' | 'createTestAutomation' | 'update'
+  > & {
+    create: ResolversParentTypes['Automation']
+    createRevision: ResolversParentTypes['AutomationRevision']
+    createTestAutomation: ResolversParentTypes['Automation']
+    update: ResolversParentTypes['Automation']
+  }
+  ProjectAutomationRevisionCreateInput: ProjectAutomationRevisionCreateInput
+  ProjectAutomationUpdateInput: ProjectAutomationUpdateInput
+  ProjectAutomationsUpdatedMessage: Omit<ProjectAutomationsUpdatedMessage, 'automation' | 'revision'> & {
+    automation?: Maybe<ResolversParentTypes['Automation']>
+    revision?: Maybe<ResolversParentTypes['AutomationRevision']>
+  }
   ProjectCollaborator: ProjectCollaborator
-  ProjectCollection: ProjectCollection
+  ProjectCollection: Omit<ProjectCollection, 'items'> & { items: Array<ResolversParentTypes['Project']> }
   ProjectCommentCollection: ProjectCommentCollection
   ProjectCommentsFilter: ProjectCommentsFilter
   ProjectCommentsUpdatedMessage: ProjectCommentsUpdatedMessage
   ProjectCreateInput: ProjectCreateInput
-  ProjectFileImportUpdatedMessage: ProjectFileImportUpdatedMessage
+  ProjectFileImportUpdatedMessage: Omit<ProjectFileImportUpdatedMessage, 'upload'> & {
+    upload: ResolversParentTypes['FileUpload']
+  }
   ProjectInviteCreateInput: ProjectInviteCreateInput
-  ProjectInviteMutations: ProjectInviteMutations
+  ProjectInviteMutations: Omit<ProjectInviteMutations, 'batchCreate' | 'cancel' | 'create' | 'createForWorkspace'> & {
+    batchCreate: ResolversParentTypes['Project']
+    cancel: ResolversParentTypes['Project']
+    create: ResolversParentTypes['Project']
+    createForWorkspace: ResolversParentTypes['Project']
+  }
   ProjectInviteUseInput: ProjectInviteUseInput
   ProjectModelsFilter: ProjectModelsFilter
   ProjectModelsTreeFilter: ProjectModelsTreeFilter
-  ProjectModelsUpdatedMessage: ProjectModelsUpdatedMessage
-  ProjectMutations: ProjectMutations
-  ProjectPendingModelsUpdatedMessage: ProjectPendingModelsUpdatedMessage
-  ProjectPendingVersionsUpdatedMessage: ProjectPendingVersionsUpdatedMessage
+  ProjectModelsUpdatedMessage: Omit<ProjectModelsUpdatedMessage, 'model'> & {
+    model?: Maybe<ResolversParentTypes['Model']>
+  }
+  ProjectMutations: Omit<
+    ProjectMutations,
+    | 'accessRequestMutations'
+    | 'automationMutations'
+    | 'create'
+    | 'createForOnboarding'
+    | 'invites'
+    | 'update'
+    | 'updateRole'
+  > & {
+    accessRequestMutations: ResolversParentTypes['ProjectAccessRequestMutations']
+    automationMutations: ResolversParentTypes['ProjectAutomationMutations']
+    create: ResolversParentTypes['Project']
+    createForOnboarding: ResolversParentTypes['Project']
+    invites: ResolversParentTypes['ProjectInviteMutations']
+    update: ResolversParentTypes['Project']
+    updateRole: ResolversParentTypes['Project']
+  }
+  ProjectPendingModelsUpdatedMessage: Omit<ProjectPendingModelsUpdatedMessage, 'model'> & {
+    model: ResolversParentTypes['FileUpload']
+  }
+  ProjectPendingVersionsUpdatedMessage: Omit<ProjectPendingVersionsUpdatedMessage, 'version'> & {
+    version: ResolversParentTypes['FileUpload']
+  }
+  ProjectRole: Omit<ProjectRole, 'project'> & { project: ResolversParentTypes['Project'] }
+  ProjectTestAutomationCreateInput: ProjectTestAutomationCreateInput
+  ProjectTriggeredAutomationsStatusUpdatedMessage: Omit<
+    ProjectTriggeredAutomationsStatusUpdatedMessage,
+    'model' | 'project' | 'run' | 'version'
+  > & {
+    model: ResolversParentTypes['Model']
+    project: ResolversParentTypes['Project']
+    run: ResolversParentTypes['AutomateRun']
+    version: ResolversParentTypes['Version']
+  }
   ProjectUpdateInput: ProjectUpdateInput
   ProjectUpdateRoleInput: ProjectUpdateRoleInput
-  ProjectUpdatedMessage: ProjectUpdatedMessage
+  ProjectUpdatedMessage: Omit<ProjectUpdatedMessage, 'project'> & { project?: Maybe<ResolversParentTypes['Project']> }
   ProjectVersionsPreviewGeneratedMessage: ProjectVersionsPreviewGeneratedMessage
-  ProjectVersionsUpdatedMessage: ProjectVersionsUpdatedMessage
+  ProjectVersionsUpdatedMessage: Omit<ProjectVersionsUpdatedMessage, 'version'> & {
+    version?: Maybe<ResolversParentTypes['Version']>
+  }
   Query: {}
   ReplyCreateInput: ReplyCreateInput
   ResourceIdentifier: ResourceIdentifier
@@ -3105,37 +4850,93 @@ export type ResolversParentTypes = {
   Scope: Scope
   ServerApp: ServerApp
   ServerAppListItem: ServerAppListItem
+  ServerAutomateInfo: ServerAutomateInfo
+  ServerConfiguration: ServerConfiguration
   ServerInfo: ServerInfo
   ServerInfoUpdateInput: ServerInfoUpdateInput
   ServerInvite: ServerInvite
   ServerInviteCreateInput: ServerInviteCreateInput
+  ServerMigration: ServerMigration
   ServerRoleItem: ServerRoleItem
   ServerStatistics: ServerStatistics
   ServerStats: ServerStats
-  SmartTextEditorValue: SmartTextEditorValue
-  Stream: Stream
-  StreamAccessRequest: StreamAccessRequest
+  ServerWorkspacesInfo: ServerWorkspacesInfo
+  SetPrimaryUserEmailInput: SetPrimaryUserEmailInput
+  SmartTextEditorValue: Omit<SmartTextEditorValue, 'attachments'> & {
+    attachments?: Maybe<Array<ResolversParentTypes['BlobMetadata']>>
+  }
+  Stream: Omit<
+    Stream,
+    'blob' | 'branch' | 'commit' | 'commits' | 'fileUpload' | 'fileUploads' | 'pendingAccessRequests'
+  > & {
+    blob?: Maybe<ResolversParentTypes['BlobMetadata']>
+    branch?: Maybe<ResolversParentTypes['Branch']>
+    commit?: Maybe<ResolversParentTypes['Commit']>
+    commits?: Maybe<ResolversParentTypes['CommitCollection']>
+    fileUpload?: Maybe<ResolversParentTypes['FileUpload']>
+    fileUploads: Array<ResolversParentTypes['FileUpload']>
+    pendingAccessRequests?: Maybe<Array<ResolversParentTypes['StreamAccessRequest']>>
+  }
+  StreamAccessRequest: Omit<StreamAccessRequest, 'stream'> & { stream: ResolversParentTypes['Stream'] }
   StreamCollaborator: StreamCollaborator
-  StreamCollection: StreamCollection
+  StreamCollection: Omit<StreamCollection, 'items'> & { items?: Maybe<Array<ResolversParentTypes['Stream']>> }
   StreamCreateInput: StreamCreateInput
   StreamInviteCreateInput: StreamInviteCreateInput
   StreamRevokePermissionInput: StreamRevokePermissionInput
   StreamUpdateInput: StreamUpdateInput
   StreamUpdatePermissionInput: StreamUpdatePermissionInput
   Subscription: {}
-  TestItem: TestItem
+  TestAutomationRun: TestAutomationRun
+  TestAutomationRunTrigger: TestAutomationRunTrigger
+  TestAutomationRunTriggerPayload: TestAutomationRunTriggerPayload
+  TokenResourceIdentifier: TokenResourceIdentifier
+  TokenResourceIdentifierInput: TokenResourceIdentifierInput
+  TriggeredAutomationsStatus: Omit<TriggeredAutomationsStatus, 'automationRuns'> & {
+    automationRuns: Array<ResolversParentTypes['AutomateRun']>
+  }
+  UpdateAutomateFunctionInput: UpdateAutomateFunctionInput
   UpdateModelInput: UpdateModelInput
   UpdateVersionInput: UpdateVersionInput
-  User: User
+  User: Omit<User, 'apiTokens' | 'commits' | 'projectAccessRequest' | 'projects' | 'workspaces'> & {
+    apiTokens: Array<ResolversParentTypes['ApiToken']>
+    commits?: Maybe<ResolversParentTypes['CommitCollection']>
+    projectAccessRequest?: Maybe<ResolversParentTypes['ProjectAccessRequest']>
+    projects: ResolversParentTypes['ProjectCollection']
+    workspaces: ResolversParentTypes['WorkspaceCollection']
+  }
+  UserAutomateInfo: UserAutomateInfo
   UserDeleteInput: UserDeleteInput
+  UserEmail: UserEmail
+  UserEmailMutations: Omit<UserEmailMutations, 'create' | 'delete' | 'setPrimary'> & {
+    create: ResolversParentTypes['User']
+    delete: ResolversParentTypes['User']
+    setPrimary: ResolversParentTypes['User']
+  }
   UserProjectsFilter: UserProjectsFilter
-  UserProjectsUpdatedMessage: UserProjectsUpdatedMessage
+  UserProjectsUpdatedMessage: Omit<UserProjectsUpdatedMessage, 'project'> & {
+    project?: Maybe<ResolversParentTypes['Project']>
+  }
   UserRoleInput: UserRoleInput
   UserSearchResultCollection: UserSearchResultCollection
   UserUpdateInput: UserUpdateInput
-  Version: Version
-  VersionCollection: VersionCollection
-  VersionMutations: VersionMutations
+  UserWorkspacesFilter: UserWorkspacesFilter
+  Version: Omit<Version, 'automationsStatus' | 'model'> & {
+    automationsStatus?: Maybe<ResolversParentTypes['TriggeredAutomationsStatus']>
+    model: ResolversParentTypes['Model']
+  }
+  VersionCollection: Omit<VersionCollection, 'items'> & { items: Array<ResolversParentTypes['Version']> }
+  VersionCreatedTrigger: Omit<VersionCreatedTrigger, 'model' | 'version'> & {
+    model?: Maybe<ResolversParentTypes['Model']>
+    version?: Maybe<ResolversParentTypes['Version']>
+  }
+  VersionCreatedTriggerDefinition: Omit<VersionCreatedTriggerDefinition, 'model'> & {
+    model?: Maybe<ResolversParentTypes['Model']>
+  }
+  VersionMutations: Omit<VersionMutations, 'create' | 'moveToModel' | 'update'> & {
+    create: ResolversParentTypes['Version']
+    moveToModel: ResolversParentTypes['Model']
+    update: ResolversParentTypes['Version']
+  }
   ViewerResourceGroup: ViewerResourceGroup
   ViewerResourceItem: ViewerResourceItem
   ViewerUpdateTrackingTarget: ViewerUpdateTrackingTarget
@@ -3148,6 +4949,58 @@ export type ResolversParentTypes = {
   WebhookEvent: WebhookEvent
   WebhookEventCollection: WebhookEventCollection
   WebhookUpdateInput: WebhookUpdateInput
+  Workspace: Omit<Workspace, 'domains' | 'projects' | 'team'> & {
+    domains?: Maybe<Array<ResolversParentTypes['WorkspaceDomain']>>
+    projects: ResolversParentTypes['ProjectCollection']
+    team: ResolversParentTypes['WorkspaceCollaboratorCollection']
+  }
+  WorkspaceBilling: WorkspaceBilling
+  WorkspaceCollaborator: Omit<WorkspaceCollaborator, 'projectRoles'> & {
+    projectRoles: Array<ResolversParentTypes['ProjectRole']>
+  }
+  WorkspaceCollaboratorCollection: Omit<WorkspaceCollaboratorCollection, 'items'> & {
+    items: Array<ResolversParentTypes['WorkspaceCollaborator']>
+  }
+  WorkspaceCollection: Omit<WorkspaceCollection, 'items'> & { items: Array<ResolversParentTypes['Workspace']> }
+  WorkspaceCost: WorkspaceCost
+  WorkspaceCostDiscount: WorkspaceCostDiscount
+  WorkspaceCostItem: WorkspaceCostItem
+  WorkspaceCreateInput: WorkspaceCreateInput
+  WorkspaceDomain: WorkspaceDomain
+  WorkspaceDomainDeleteInput: WorkspaceDomainDeleteInput
+  WorkspaceInviteCreateInput: WorkspaceInviteCreateInput
+  WorkspaceInviteLookupOptions: WorkspaceInviteLookupOptions
+  WorkspaceInviteMutations: Omit<WorkspaceInviteMutations, 'batchCreate' | 'cancel' | 'create'> & {
+    batchCreate: ResolversParentTypes['Workspace']
+    cancel: ResolversParentTypes['Workspace']
+    create: ResolversParentTypes['Workspace']
+  }
+  WorkspaceInviteResendInput: WorkspaceInviteResendInput
+  WorkspaceInviteUseInput: WorkspaceInviteUseInput
+  WorkspaceMutations: Omit<
+    WorkspaceMutations,
+    'addDomain' | 'create' | 'deleteDomain' | 'invites' | 'join' | 'projects' | 'update' | 'updateRole'
+  > & {
+    addDomain: ResolversParentTypes['Workspace']
+    create: ResolversParentTypes['Workspace']
+    deleteDomain: ResolversParentTypes['Workspace']
+    invites: ResolversParentTypes['WorkspaceInviteMutations']
+    join: ResolversParentTypes['Workspace']
+    projects: ResolversParentTypes['WorkspaceProjectMutations']
+    update: ResolversParentTypes['Workspace']
+    updateRole: ResolversParentTypes['Workspace']
+  }
+  WorkspaceProjectInviteCreateInput: WorkspaceProjectInviteCreateInput
+  WorkspaceProjectMutations: Omit<WorkspaceProjectMutations, 'moveToWorkspace' | 'updateRole'> & {
+    moveToWorkspace: ResolversParentTypes['Project']
+    updateRole: ResolversParentTypes['Project']
+  }
+  WorkspaceProjectsFilter: WorkspaceProjectsFilter
+  WorkspaceRoleDeleteInput: WorkspaceRoleDeleteInput
+  WorkspaceRoleUpdateInput: WorkspaceRoleUpdateInput
+  WorkspaceTeamFilter: WorkspaceTeamFilter
+  WorkspaceUpdateInput: WorkspaceUpdateInput
+  WorkspaceVersionsCount: WorkspaceVersionsCount
 }
 
 export type HasScopeDirectiveArgs = {
@@ -3194,6 +5047,17 @@ export type HasStreamRoleDirectiveResolver<
   Args = HasStreamRoleDirectiveArgs,
 > = DirectiveResolverFn<Result, Parent, ContextType, Args>
 
+export type HasWorkspaceRoleDirectiveArgs = {
+  role: WorkspaceRole
+}
+
+export type HasWorkspaceRoleDirectiveResolver<
+  Result,
+  Parent,
+  ContextType = any,
+  Args = HasWorkspaceRoleDirectiveArgs,
+> = DirectiveResolverFn<Result, Parent, ContextType, Args>
+
 export type IsOwnerDirectiveArgs = {}
 
 export type IsOwnerDirectiveResolver<
@@ -3203,10 +5067,20 @@ export type IsOwnerDirectiveResolver<
   Args = IsOwnerDirectiveArgs,
 > = DirectiveResolverFn<Result, Parent, ContextType, Args>
 
+export type OneOfDirectiveArgs = {}
+
+export type OneOfDirectiveResolver<Result, Parent, ContextType = any, Args = OneOfDirectiveArgs> = DirectiveResolverFn<
+  Result,
+  Parent,
+  ContextType,
+  Args
+>
+
 export type ActiveUserMutationsResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['ActiveUserMutations'] = ResolversParentTypes['ActiveUserMutations'],
 > = {
+  emailMutations?: Resolver<ResolversTypes['UserEmailMutations'], ParentType, ContextType>
   finishOnboarding?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
   update?: Resolver<
     ResolversTypes['User'],
@@ -3238,7 +5112,7 @@ export type ActivityCollectionResolvers<
   ParentType extends ResolversParentTypes['ActivityCollection'] = ResolversParentTypes['ActivityCollection'],
 > = {
   cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
-  items?: Resolver<Maybe<Array<Maybe<ResolversTypes['Activity']>>>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['Activity']>, ParentType, ContextType>
   totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
@@ -3275,6 +5149,12 @@ export type AdminQueriesResolvers<
     ParentType,
     ContextType,
     RequireFields<AdminQueriesUserListArgs, 'cursor' | 'limit' | 'query' | 'role'>
+  >
+  workspaceList?: Resolver<
+    ResolversTypes['WorkspaceCollection'],
+    ParentType,
+    ContextType,
+    RequireFields<AdminQueriesWorkspaceListArgs, 'cursor' | 'limit'>
   >
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
@@ -3359,65 +5239,219 @@ export type AuthStrategyResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
-export type AutomationFunctionRunResolvers<
+export type AutomateFunctionResolvers<
   ContextType = any,
-  ParentType extends ResolversParentTypes['AutomationFunctionRun'] = ResolversParentTypes['AutomationFunctionRun'],
+  ParentType extends ResolversParentTypes['AutomateFunction'] = ResolversParentTypes['AutomateFunction'],
+> = {
+  automationCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  creator?: Resolver<Maybe<ResolversTypes['LimitedUser']>, ParentType, ContextType>
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  isFeatured?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  logo?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  releases?: Resolver<
+    ResolversTypes['AutomateFunctionReleaseCollection'],
+    ParentType,
+    ContextType,
+    Partial<AutomateFunctionReleasesArgs>
+  >
+  repo?: Resolver<ResolversTypes['BasicGitRepositoryMetadata'], ParentType, ContextType>
+  supportedSourceApps?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>
+  tags?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateFunctionCollectionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['AutomateFunctionCollection'] = ResolversParentTypes['AutomateFunctionCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['AutomateFunction']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateFunctionReleaseResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomateFunctionRelease'] = ResolversParentTypes['AutomateFunctionRelease'],
+> = {
+  commitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  function?: Resolver<ResolversTypes['AutomateFunction'], ParentType, ContextType>
+  functionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  inputSchema?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
+  versionTag?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateFunctionReleaseCollectionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['AutomateFunctionReleaseCollection'] = ResolversParentTypes['AutomateFunctionReleaseCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['AutomateFunctionRelease']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateFunctionRunResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomateFunctionRun'] = ResolversParentTypes['AutomateFunctionRun'],
 > = {
   contextView?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
-  elapsed?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
-  functionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
-  functionLogo?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
-  functionName?: Resolver<ResolversTypes['String'], ParentType, ContextType>
-  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
-  resultVersions?: Resolver<Array<ResolversTypes['Version']>, ParentType, ContextType>
-  results?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
-  status?: Resolver<ResolversTypes['AutomationRunStatus'], ParentType, ContextType>
-  statusMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
-}
-
-export type AutomationMutationsResolvers<
-  ContextType = any,
-  ParentType extends ResolversParentTypes['AutomationMutations'] = ResolversParentTypes['AutomationMutations'],
-> = {
-  create?: Resolver<
-    ResolversTypes['Boolean'],
-    ParentType,
-    ContextType,
-    RequireFields<AutomationMutationsCreateArgs, 'input'>
-  >
-  functionRunStatusReport?: Resolver<
-    ResolversTypes['Boolean'],
-    ParentType,
-    ContextType,
-    RequireFields<AutomationMutationsFunctionRunStatusReportArgs, 'input'>
-  >
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
-}
-
-export type AutomationRunResolvers<
-  ContextType = any,
-  ParentType extends ResolversParentTypes['AutomationRun'] = ResolversParentTypes['AutomationRun'],
-> = {
-  automationId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
-  automationName?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
-  functionRuns?: Resolver<Array<ResolversTypes['AutomationFunctionRun']>, ParentType, ContextType>
+  elapsed?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
+  function?: Resolver<Maybe<ResolversTypes['AutomateFunction']>, ParentType, ContextType>
+  functionId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  functionReleaseId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
-  status?: Resolver<ResolversTypes['AutomationRunStatus'], ParentType, ContextType>
+  results?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
+  status?: Resolver<ResolversTypes['AutomateRunStatus'], ParentType, ContextType>
+  statusMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
-  versionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
-export type AutomationsStatusResolvers<
+export type AutomateFunctionTemplateResolvers<
   ContextType = any,
-  ParentType extends ResolversParentTypes['AutomationsStatus'] = ResolversParentTypes['AutomationsStatus'],
+  ParentType extends
+    ResolversParentTypes['AutomateFunctionTemplate'] = ResolversParentTypes['AutomateFunctionTemplate'],
 > = {
-  automationRuns?: Resolver<Array<ResolversTypes['AutomationRun']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['AutomateFunctionTemplateLanguage'], ParentType, ContextType>
+  logo?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  url?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateMutationsResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomateMutations'] = ResolversParentTypes['AutomateMutations'],
+> = {
+  createFunction?: Resolver<
+    ResolversTypes['AutomateFunction'],
+    ParentType,
+    ContextType,
+    RequireFields<AutomateMutationsCreateFunctionArgs, 'input'>
+  >
+  updateFunction?: Resolver<
+    ResolversTypes['AutomateFunction'],
+    ParentType,
+    ContextType,
+    RequireFields<AutomateMutationsUpdateFunctionArgs, 'input'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateRunResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomateRun'] = ResolversParentTypes['AutomateRun'],
+> = {
+  automation?: Resolver<ResolversTypes['Automation'], ParentType, ContextType>
+  automationId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  functionRuns?: Resolver<Array<ResolversTypes['AutomateFunctionRun']>, ParentType, ContextType>
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
-  status?: Resolver<ResolversTypes['AutomationRunStatus'], ParentType, ContextType>
-  statusMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  status?: Resolver<ResolversTypes['AutomateRunStatus'], ParentType, ContextType>
+  trigger?: Resolver<ResolversTypes['AutomationRunTrigger'], ParentType, ContextType>
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomateRunCollectionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomateRunCollection'] = ResolversParentTypes['AutomateRunCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['AutomateRun']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomationResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['Automation'] = ResolversParentTypes['Automation'],
+> = {
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  creationPublicKeys?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>
+  currentRevision?: Resolver<Maybe<ResolversTypes['AutomationRevision']>, ParentType, ContextType>
+  enabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  isTestAutomation?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  runs?: Resolver<ResolversTypes['AutomateRunCollection'], ParentType, ContextType, Partial<AutomationRunsArgs>>
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomationCollectionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomationCollection'] = ResolversParentTypes['AutomationCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['Automation']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomationRevisionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomationRevision'] = ResolversParentTypes['AutomationRevision'],
+> = {
+  functions?: Resolver<Array<ResolversTypes['AutomationRevisionFunction']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  triggerDefinitions?: Resolver<Array<ResolversTypes['AutomationRevisionTriggerDefinition']>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomationRevisionFunctionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['AutomationRevisionFunction'] = ResolversParentTypes['AutomationRevisionFunction'],
+> = {
+  parameters?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
+  release?: Resolver<ResolversTypes['AutomateFunctionRelease'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type AutomationRevisionTriggerDefinitionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['AutomationRevisionTriggerDefinition'] = ResolversParentTypes['AutomationRevisionTriggerDefinition'],
+> = {
+  __resolveType: TypeResolveFn<'VersionCreatedTriggerDefinition', ParentType, ContextType>
+}
+
+export type AutomationRunTriggerResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AutomationRunTrigger'] = ResolversParentTypes['AutomationRunTrigger'],
+> = {
+  __resolveType: TypeResolveFn<'VersionCreatedTrigger', ParentType, ContextType>
+}
+
+export type AvatarUserResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['AvatarUser'] = ResolversParentTypes['AvatarUser'],
+> = {
+  avatar?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type BasicGitRepositoryMetadataResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['BasicGitRepositoryMetadata'] = ResolversParentTypes['BasicGitRepositoryMetadata'],
+> = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  owner?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  url?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -3647,12 +5681,28 @@ export type CommitCollectionResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
+export type CountOnlyCollectionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['CountOnlyCollection'] = ResolversParentTypes['CountOnlyCollection'],
+> = {
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
   name: 'DateTime'
 }
 
-export interface EmailAddressScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['EmailAddress'], any> {
-  name: 'EmailAddress'
+export type DiscoverableWorkspaceResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['DiscoverableWorkspace'] = ResolversParentTypes['DiscoverableWorkspace'],
+> = {
+  defaultLogoIndex?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  logo?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
 export type FileUploadResolvers<
@@ -3676,6 +5726,35 @@ export type FileUploadResolvers<
   uploadComplete?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
   uploadDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type GendoAiRenderResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['GendoAIRender'] = ResolversParentTypes['GendoAIRender'],
+> = {
+  camera?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  gendoGenerationId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  modelId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  projectId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  prompt?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  responseImage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  user?: Resolver<Maybe<ResolversTypes['AvatarUser']>, ParentType, ContextType>
+  userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  versionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type GendoAiRenderCollectionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['GendoAIRenderCollection'] = ResolversParentTypes['GendoAIRenderCollection'],
+> = {
+  items?: Resolver<Array<Maybe<ResolversTypes['GendoAIRender']>>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -3731,6 +5810,12 @@ export type LimitedUserResolvers<
   >
   totalOwnedStreamsFavorites?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   verified?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>
+  workspaceDomainPolicyCompliant?: Resolver<
+    Maybe<ResolversTypes['Boolean']>,
+    ParentType,
+    ContextType,
+    Partial<LimitedUserWorkspaceDomainPolicyCompliantArgs>
+  >
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -3739,7 +5824,7 @@ export type ModelResolvers<
   ParentType extends ResolversParentTypes['Model'] = ResolversParentTypes['Model'],
 > = {
   author?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
-  automationStatus?: Resolver<Maybe<ResolversTypes['AutomationsStatus']>, ParentType, ContextType>
+  automationsStatus?: Resolver<Maybe<ResolversTypes['TriggeredAutomationsStatus']>, ParentType, ContextType>
   childrenTree?: Resolver<Array<ResolversTypes['ModelsTreeItem']>, ParentType, ContextType>
   commentThreads?: Resolver<
     ResolversTypes['CommentCollection'],
@@ -3864,7 +5949,13 @@ export type MutationResolvers<
     RequireFields<MutationAppTokenCreateArgs, 'token'>
   >
   appUpdate?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationAppUpdateArgs, 'app'>>
-  automationMutations?: Resolver<ResolversTypes['AutomationMutations'], ParentType, ContextType>
+  automateFunctionRunStatusReport?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<MutationAutomateFunctionRunStatusReportArgs, 'input'>
+  >
+  automateMutations?: Resolver<ResolversTypes['AutomateMutations'], ParentType, ContextType>
   branchCreate?: Resolver<
     ResolversTypes['String'],
     ParentType,
@@ -3970,7 +6061,7 @@ export type MutationResolvers<
   >
   modelMutations?: Resolver<ResolversTypes['ModelMutations'], ParentType, ContextType>
   objectCreate?: Resolver<
-    Array<Maybe<ResolversTypes['String']>>,
+    Array<ResolversTypes['String']>,
     ParentType,
     ContextType,
     RequireFields<MutationObjectCreateArgs, 'objectInput'>
@@ -4135,6 +6226,7 @@ export type MutationResolvers<
     ContextType,
     RequireFields<MutationWebhookUpdateArgs, 'webhook'>
   >
+  workspaceMutations?: Resolver<ResolversTypes['WorkspaceMutations'], ParentType, ContextType>
 }
 
 export type ObjectResolvers<
@@ -4162,7 +6254,7 @@ export type ObjectCollectionResolvers<
   ParentType extends ResolversParentTypes['ObjectCollection'] = ResolversParentTypes['ObjectCollection'],
 > = {
   cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
-  objects?: Resolver<Array<Maybe<ResolversTypes['Object']>>, ParentType, ContextType>
+  objects?: Resolver<Array<ResolversTypes['Object']>, ParentType, ContextType>
   totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
@@ -4206,22 +6298,67 @@ export type PendingStreamCollaboratorResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
+export type PendingWorkspaceCollaboratorResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['PendingWorkspaceCollaborator'] = ResolversParentTypes['PendingWorkspaceCollaborator'],
+> = {
+  email?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  inviteId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  invitedBy?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
+  role?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  token?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  user?: Resolver<Maybe<ResolversTypes['LimitedUser']>, ParentType, ContextType>
+  workspaceId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  workspaceName?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
 export type ProjectResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['Project'] = ResolversParentTypes['Project'],
 > = {
   allowPublicComments?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  automation?: Resolver<
+    ResolversTypes['Automation'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationArgs, 'id'>
+  >
+  automations?: Resolver<
+    ResolversTypes['AutomationCollection'],
+    ParentType,
+    ContextType,
+    Partial<ProjectAutomationsArgs>
+  >
+  blob?: Resolver<Maybe<ResolversTypes['BlobMetadata']>, ParentType, ContextType, RequireFields<ProjectBlobArgs, 'id'>>
+  blobs?: Resolver<
+    Maybe<ResolversTypes['BlobMetadataCollection']>,
+    ParentType,
+    ContextType,
+    RequireFields<ProjectBlobsArgs, 'cursor' | 'limit' | 'query'>
+  >
+  comment?: Resolver<Maybe<ResolversTypes['Comment']>, ParentType, ContextType, RequireFields<ProjectCommentArgs, 'id'>>
   commentThreads?: Resolver<
     ResolversTypes['ProjectCommentCollection'],
     ParentType,
     ContextType,
-    RequireFields<ProjectCommentThreadsArgs, 'limit'>
+    Partial<ProjectCommentThreadsArgs>
   >
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
   invitedTeam?: Resolver<Maybe<Array<ResolversTypes['PendingStreamCollaborator']>>, ParentType, ContextType>
   model?: Resolver<ResolversTypes['Model'], ParentType, ContextType, RequireFields<ProjectModelArgs, 'id'>>
+  modelByName?: Resolver<
+    ResolversTypes['Model'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectModelByNameArgs, 'name'>
+  >
   modelChildrenTree?: Resolver<
     Array<ResolversTypes['ModelsTreeItem']>,
     ParentType,
@@ -4241,6 +6378,8 @@ export type ProjectResolvers<
     RequireFields<ProjectModelsTreeArgs, 'limit'>
   >
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  object?: Resolver<Maybe<ResolversTypes['Object']>, ParentType, ContextType, RequireFields<ProjectObjectArgs, 'id'>>
+  pendingAccessRequests?: Resolver<Maybe<Array<ResolversTypes['ProjectAccessRequest']>>, ParentType, ContextType>
   pendingImportedModels?: Resolver<
     Array<ResolversTypes['FileUpload']>,
     ParentType,
@@ -4251,6 +6390,7 @@ export type ProjectResolvers<
   sourceApps?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>
   team?: Resolver<Array<ResolversTypes['ProjectCollaborator']>, ParentType, ContextType>
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  version?: Resolver<Maybe<ResolversTypes['Version']>, ParentType, ContextType, RequireFields<ProjectVersionArgs, 'id'>>
   versions?: Resolver<
     ResolversTypes['VersionCollection'],
     ParentType,
@@ -4265,18 +6405,97 @@ export type ProjectResolvers<
   >
   visibility?: Resolver<ResolversTypes['ProjectVisibility'], ParentType, ContextType>
   webhooks?: Resolver<ResolversTypes['WebhookCollection'], ParentType, ContextType, Partial<ProjectWebhooksArgs>>
+  workspace?: Resolver<Maybe<ResolversTypes['Workspace']>, ParentType, ContextType>
+  workspaceId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
-export type ProjectAutomationsStatusUpdatedMessageResolvers<
+export type ProjectAccessRequestResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ProjectAccessRequest'] = ResolversParentTypes['ProjectAccessRequest'],
+> = {
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  project?: Resolver<ResolversTypes['Project'], ParentType, ContextType>
+  projectId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  requester?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
+  requesterId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ProjectAccessRequestMutationsResolvers<
   ContextType = any,
   ParentType extends
-    ResolversParentTypes['ProjectAutomationsStatusUpdatedMessage'] = ResolversParentTypes['ProjectAutomationsStatusUpdatedMessage'],
+    ResolversParentTypes['ProjectAccessRequestMutations'] = ResolversParentTypes['ProjectAccessRequestMutations'],
 > = {
-  model?: Resolver<ResolversTypes['Model'], ParentType, ContextType>
-  project?: Resolver<ResolversTypes['Project'], ParentType, ContextType>
-  status?: Resolver<ResolversTypes['AutomationsStatus'], ParentType, ContextType>
-  version?: Resolver<ResolversTypes['Version'], ParentType, ContextType>
+  create?: Resolver<
+    ResolversTypes['ProjectAccessRequest'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAccessRequestMutationsCreateArgs, 'projectId'>
+  >
+  use?: Resolver<
+    ResolversTypes['Project'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAccessRequestMutationsUseArgs, 'accept' | 'requestId' | 'role'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ProjectAutomationMutationsResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['ProjectAutomationMutations'] = ResolversParentTypes['ProjectAutomationMutations'],
+> = {
+  create?: Resolver<
+    ResolversTypes['Automation'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsCreateArgs, 'input'>
+  >
+  createRevision?: Resolver<
+    ResolversTypes['AutomationRevision'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsCreateRevisionArgs, 'input'>
+  >
+  createTestAutomation?: Resolver<
+    ResolversTypes['Automation'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsCreateTestAutomationArgs, 'input'>
+  >
+  createTestAutomationRun?: Resolver<
+    ResolversTypes['TestAutomationRun'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsCreateTestAutomationRunArgs, 'automationId'>
+  >
+  trigger?: Resolver<
+    ResolversTypes['String'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsTriggerArgs, 'automationId'>
+  >
+  update?: Resolver<
+    ResolversTypes['Automation'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectAutomationMutationsUpdateArgs, 'input'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ProjectAutomationsUpdatedMessageResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['ProjectAutomationsUpdatedMessage'] = ResolversParentTypes['ProjectAutomationsUpdatedMessage'],
+> = {
+  automation?: Resolver<Maybe<ResolversTypes['Automation']>, ParentType, ContextType>
+  automationId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  revision?: Resolver<Maybe<ResolversTypes['AutomationRevision']>, ParentType, ContextType>
+  type?: Resolver<ResolversTypes['ProjectAutomationsUpdatedMessageType'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4284,6 +6503,7 @@ export type ProjectCollaboratorResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['ProjectCollaborator'] = ResolversParentTypes['ProjectCollaborator'],
 > = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
   role?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   user?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
@@ -4355,6 +6575,12 @@ export type ProjectInviteMutationsResolvers<
     ContextType,
     RequireFields<ProjectInviteMutationsCreateArgs, 'input' | 'projectId'>
   >
+  createForWorkspace?: Resolver<
+    ResolversTypes['Project'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectInviteMutationsCreateForWorkspaceArgs, 'inputs' | 'projectId'>
+  >
   use?: Resolver<
     ResolversTypes['Boolean'],
     ParentType,
@@ -4379,6 +6605,19 @@ export type ProjectMutationsResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['ProjectMutations'] = ResolversParentTypes['ProjectMutations'],
 > = {
+  accessRequestMutations?: Resolver<ResolversTypes['ProjectAccessRequestMutations'], ParentType, ContextType>
+  automationMutations?: Resolver<
+    ResolversTypes['ProjectAutomationMutations'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectMutationsAutomationMutationsArgs, 'projectId'>
+  >
+  batchDelete?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<ProjectMutationsBatchDeleteArgs, 'ids'>
+  >
   create?: Resolver<ResolversTypes['Project'], ParentType, ContextType, Partial<ProjectMutationsCreateArgs>>
   createForOnboarding?: Resolver<ResolversTypes['Project'], ParentType, ContextType>
   delete?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<ProjectMutationsDeleteArgs, 'id'>>
@@ -4418,6 +6657,28 @@ export type ProjectPendingVersionsUpdatedMessageResolvers<
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   type?: Resolver<ResolversTypes['ProjectPendingVersionsUpdatedMessageType'], ParentType, ContextType>
   version?: Resolver<ResolversTypes['FileUpload'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ProjectRoleResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ProjectRole'] = ResolversParentTypes['ProjectRole'],
+> = {
+  project?: Resolver<ResolversTypes['Project'], ParentType, ContextType>
+  role?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ProjectTriggeredAutomationsStatusUpdatedMessageResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['ProjectTriggeredAutomationsStatusUpdatedMessage'] = ResolversParentTypes['ProjectTriggeredAutomationsStatusUpdatedMessage'],
+> = {
+  model?: Resolver<ResolversTypes['Model'], ParentType, ContextType>
+  project?: Resolver<ResolversTypes['Project'], ParentType, ContextType>
+  run?: Resolver<ResolversTypes['AutomateRun'], ParentType, ContextType>
+  type?: Resolver<ResolversTypes['ProjectTriggeredAutomationsStatusUpdatedMessageType'], ParentType, ContextType>
+  version?: Resolver<ResolversTypes['Version'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4476,6 +6737,24 @@ export type QueryResolvers<
   app?: Resolver<Maybe<ResolversTypes['ServerApp']>, ParentType, ContextType, RequireFields<QueryAppArgs, 'id'>>
   apps?: Resolver<Maybe<Array<Maybe<ResolversTypes['ServerAppListItem']>>>, ParentType, ContextType>
   authenticatedAsApp?: Resolver<Maybe<ResolversTypes['ServerAppListItem']>, ParentType, ContextType>
+  automateFunction?: Resolver<
+    ResolversTypes['AutomateFunction'],
+    ParentType,
+    ContextType,
+    RequireFields<QueryAutomateFunctionArgs, 'id'>
+  >
+  automateFunctions?: Resolver<
+    ResolversTypes['AutomateFunctionCollection'],
+    ParentType,
+    ContextType,
+    Partial<QueryAutomateFunctionsArgs>
+  >
+  automateValidateAuthCode?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<QueryAutomateValidateAuthCodeArgs, 'payload'>
+  >
   comment?: Resolver<
     Maybe<ResolversTypes['Comment']>,
     ParentType,
@@ -4512,7 +6791,7 @@ export type QueryResolvers<
     Maybe<ResolversTypes['ServerInvite']>,
     ParentType,
     ContextType,
-    RequireFields<QueryServerInviteByTokenArgs, 'token'>
+    Partial<QueryServerInviteByTokenArgs>
   >
   serverStats?: Resolver<ResolversTypes['ServerStats'], ParentType, ContextType>
   stream?: Resolver<Maybe<ResolversTypes['Stream']>, ParentType, ContextType, RequireFields<QueryStreamArgs, 'id'>>
@@ -4535,8 +6814,6 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryStreamsArgs, 'limit'>
   >
-  testList?: Resolver<Array<ResolversTypes['TestItem']>, ParentType, ContextType>
-  testNumber?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, Partial<QueryUserArgs>>
   userPwdStrength?: Resolver<
     ResolversTypes['PasswordStrengthCheckResults'],
@@ -4549,6 +6826,25 @@ export type QueryResolvers<
     ParentType,
     ContextType,
     RequireFields<QueryUserSearchArgs, 'archived' | 'emailOnly' | 'limit' | 'query'>
+  >
+  validateWorkspaceSlug?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<QueryValidateWorkspaceSlugArgs, 'slug'>
+  >
+  workspace?: Resolver<ResolversTypes['Workspace'], ParentType, ContextType, RequireFields<QueryWorkspaceArgs, 'id'>>
+  workspaceBySlug?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<QueryWorkspaceBySlugArgs, 'slug'>
+  >
+  workspaceInvite?: Resolver<
+    Maybe<ResolversTypes['PendingWorkspaceCollaborator']>,
+    ParentType,
+    ContextType,
+    Partial<QueryWorkspaceInviteArgs>
   >
 }
 
@@ -4614,25 +6910,48 @@ export type ServerAppListItemResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
+export type ServerAutomateInfoResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ServerAutomateInfo'] = ResolversParentTypes['ServerAutomateInfo'],
+> = {
+  availableFunctionTemplates?: Resolver<Array<ResolversTypes['AutomateFunctionTemplate']>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ServerConfigurationResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ServerConfiguration'] = ResolversParentTypes['ServerConfiguration'],
+> = {
+  blobSizeLimitBytes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  objectMultipartUploadSizeLimitBytes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  objectSizeLimitBytes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
 export type ServerInfoResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['ServerInfo'] = ResolversParentTypes['ServerInfo'],
 > = {
   adminContact?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   authStrategies?: Resolver<Array<ResolversTypes['AuthStrategy']>, ParentType, ContextType>
+  automate?: Resolver<ResolversTypes['ServerAutomateInfo'], ParentType, ContextType>
   automateUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   blobSizeLimitBytes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   canonicalUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   company?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  configuration?: Resolver<ResolversTypes['ServerConfiguration'], ParentType, ContextType>
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  enableNewWebUiMessaging?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>
   guestModeEnabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
   inviteOnly?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>
+  migration?: Resolver<Maybe<ResolversTypes['ServerMigration']>, ParentType, ContextType>
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   roles?: Resolver<Array<ResolversTypes['Role']>, ParentType, ContextType>
   scopes?: Resolver<Array<ResolversTypes['Scope']>, ParentType, ContextType>
   serverRoles?: Resolver<Array<ResolversTypes['ServerRoleItem']>, ParentType, ContextType>
   termsOfService?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   version?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  workspaces?: Resolver<ResolversTypes['ServerWorkspacesInfo'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4643,6 +6962,15 @@ export type ServerInviteResolvers<
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   invitedBy?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ServerMigrationResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ServerMigration'] = ResolversParentTypes['ServerMigration'],
+> = {
+  movedFrom?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  movedTo?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4677,6 +7005,14 @@ export type ServerStatsResolvers<
   totalStreamCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   totalUserCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   userHistory?: Resolver<Maybe<Array<Maybe<ResolversTypes['JSONObject']>>>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type ServerWorkspacesInfoResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['ServerWorkspacesInfo'] = ResolversParentTypes['ServerWorkspacesInfo'],
+> = {
+  workspacesEnabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4847,12 +7183,12 @@ export type SubscriptionResolvers<
     ContextType,
     RequireFields<SubscriptionCommitUpdatedArgs, 'streamId'>
   >
-  projectAutomationsStatusUpdated?: SubscriptionResolver<
-    ResolversTypes['ProjectAutomationsStatusUpdatedMessage'],
-    'projectAutomationsStatusUpdated',
+  projectAutomationsUpdated?: SubscriptionResolver<
+    ResolversTypes['ProjectAutomationsUpdatedMessage'],
+    'projectAutomationsUpdated',
     ParentType,
     ContextType,
-    RequireFields<SubscriptionProjectAutomationsStatusUpdatedArgs, 'projectId'>
+    RequireFields<SubscriptionProjectAutomationsUpdatedArgs, 'projectId'>
   >
   projectCommentsUpdated?: SubscriptionResolver<
     ResolversTypes['ProjectCommentsUpdatedMessage'],
@@ -4889,12 +7225,33 @@ export type SubscriptionResolvers<
     ContextType,
     RequireFields<SubscriptionProjectPendingVersionsUpdatedArgs, 'id'>
   >
+  projectTriggeredAutomationsStatusUpdated?: SubscriptionResolver<
+    ResolversTypes['ProjectTriggeredAutomationsStatusUpdatedMessage'],
+    'projectTriggeredAutomationsStatusUpdated',
+    ParentType,
+    ContextType,
+    RequireFields<SubscriptionProjectTriggeredAutomationsStatusUpdatedArgs, 'projectId'>
+  >
   projectUpdated?: SubscriptionResolver<
     ResolversTypes['ProjectUpdatedMessage'],
     'projectUpdated',
     ParentType,
     ContextType,
     RequireFields<SubscriptionProjectUpdatedArgs, 'id'>
+  >
+  projectVersionGendoAIRenderCreated?: SubscriptionResolver<
+    ResolversTypes['GendoAIRender'],
+    'projectVersionGendoAIRenderCreated',
+    ParentType,
+    ContextType,
+    RequireFields<SubscriptionProjectVersionGendoAiRenderCreatedArgs, 'id' | 'versionId'>
+  >
+  projectVersionGendoAIRenderUpdated?: SubscriptionResolver<
+    ResolversTypes['GendoAIRender'],
+    'projectVersionGendoAIRenderUpdated',
+    ParentType,
+    ContextType,
+    RequireFields<SubscriptionProjectVersionGendoAiRenderUpdatedArgs, 'id' | 'versionId'>
   >
   projectVersionsPreviewGenerated?: SubscriptionResolver<
     ResolversTypes['ProjectVersionsPreviewGeneratedMessage'],
@@ -4958,12 +7315,54 @@ export type SubscriptionResolvers<
   >
 }
 
-export type TestItemResolvers<
+export type TestAutomationRunResolvers<
   ContextType = any,
-  ParentType extends ResolversParentTypes['TestItem'] = ResolversParentTypes['TestItem'],
+  ParentType extends ResolversParentTypes['TestAutomationRun'] = ResolversParentTypes['TestAutomationRun'],
 > = {
-  bar?: Resolver<ResolversTypes['String'], ParentType, ContextType>
-  foo?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  automationRunId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  functionRunId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  triggers?: Resolver<Array<ResolversTypes['TestAutomationRunTrigger']>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type TestAutomationRunTriggerResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['TestAutomationRunTrigger'] = ResolversParentTypes['TestAutomationRunTrigger'],
+> = {
+  payload?: Resolver<ResolversTypes['TestAutomationRunTriggerPayload'], ParentType, ContextType>
+  triggerType?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type TestAutomationRunTriggerPayloadResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['TestAutomationRunTriggerPayload'] = ResolversParentTypes['TestAutomationRunTriggerPayload'],
+> = {
+  modelId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  versionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type TokenResourceIdentifierResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['TokenResourceIdentifier'] = ResolversParentTypes['TokenResourceIdentifier'],
+> = {
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  type?: Resolver<ResolversTypes['TokenResourceIdentifierType'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type TriggeredAutomationsStatusResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['TriggeredAutomationsStatus'] = ResolversParentTypes['TriggeredAutomationsStatus'],
+> = {
+  automationRuns?: Resolver<Array<ResolversTypes['AutomateRun']>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  status?: Resolver<ResolversTypes['AutomateRunStatus'], ParentType, ContextType>
+  statusMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -4978,7 +7377,8 @@ export type UserResolvers<
     RequireFields<UserActivityArgs, 'limit'>
   >
   apiTokens?: Resolver<Array<ResolversTypes['ApiToken']>, ParentType, ContextType>
-  authorizedApps?: Resolver<Maybe<Array<Maybe<ResolversTypes['ServerAppListItem']>>>, ParentType, ContextType>
+  authorizedApps?: Resolver<Maybe<Array<ResolversTypes['ServerAppListItem']>>, ParentType, ContextType>
+  automateInfo?: Resolver<ResolversTypes['UserAutomateInfo'], ParentType, ContextType>
   avatar?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   bio?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   commits?: Resolver<
@@ -4990,7 +7390,9 @@ export type UserResolvers<
   company?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   createdApps?: Resolver<Maybe<Array<ResolversTypes['ServerApp']>>, ParentType, ContextType>
   createdAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>
+  discoverableWorkspaces?: Resolver<Array<ResolversTypes['DiscoverableWorkspace']>, ParentType, ContextType>
   email?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  emails?: Resolver<Array<ResolversTypes['UserEmail']>, ParentType, ContextType>
   favoriteStreams?: Resolver<
     ResolversTypes['StreamCollection'],
     ParentType,
@@ -5003,6 +7405,12 @@ export type UserResolvers<
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   notificationPreferences?: Resolver<ResolversTypes['JSONObject'], ParentType, ContextType>
   profiles?: Resolver<Maybe<ResolversTypes['JSONObject']>, ParentType, ContextType>
+  projectAccessRequest?: Resolver<
+    Maybe<ResolversTypes['ProjectAccessRequest']>,
+    ParentType,
+    ContextType,
+    RequireFields<UserProjectAccessRequestArgs, 'projectId'>
+  >
   projectInvites?: Resolver<Array<ResolversTypes['PendingStreamCollaborator']>, ParentType, ContextType>
   projects?: Resolver<
     ResolversTypes['ProjectCollection'],
@@ -5025,6 +7433,71 @@ export type UserResolvers<
   >
   totalOwnedStreamsFavorites?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
   verified?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType>
+  versions?: Resolver<
+    ResolversTypes['CountOnlyCollection'],
+    ParentType,
+    ContextType,
+    RequireFields<UserVersionsArgs, 'authoredOnly' | 'limit'>
+  >
+  workspaceInvites?: Resolver<Array<ResolversTypes['PendingWorkspaceCollaborator']>, ParentType, ContextType>
+  workspaces?: Resolver<
+    ResolversTypes['WorkspaceCollection'],
+    ParentType,
+    ContextType,
+    RequireFields<UserWorkspacesArgs, 'cursor' | 'limit'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type UserAutomateInfoResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['UserAutomateInfo'] = ResolversParentTypes['UserAutomateInfo'],
+> = {
+  availableGithubOrgs?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>
+  hasAutomateGithubApp?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type UserEmailResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['UserEmail'] = ResolversParentTypes['UserEmail'],
+> = {
+  email?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  primary?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  userId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  verified?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type UserEmailMutationsResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['UserEmailMutations'] = ResolversParentTypes['UserEmailMutations'],
+> = {
+  create?: Resolver<
+    ResolversTypes['User'],
+    ParentType,
+    ContextType,
+    RequireFields<UserEmailMutationsCreateArgs, 'input'>
+  >
+  delete?: Resolver<
+    ResolversTypes['User'],
+    ParentType,
+    ContextType,
+    RequireFields<UserEmailMutationsDeleteArgs, 'input'>
+  >
+  requestNewEmailVerification?: Resolver<
+    Maybe<ResolversTypes['Boolean']>,
+    ParentType,
+    ContextType,
+    RequireFields<UserEmailMutationsRequestNewEmailVerificationArgs, 'input'>
+  >
+  setPrimary?: Resolver<
+    ResolversTypes['User'],
+    ParentType,
+    ContextType,
+    RequireFields<UserEmailMutationsSetPrimaryArgs, 'input'>
+  >
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -5054,7 +7527,7 @@ export type VersionResolvers<
   ParentType extends ResolversParentTypes['Version'] = ResolversParentTypes['Version'],
 > = {
   authorUser?: Resolver<Maybe<ResolversTypes['LimitedUser']>, ParentType, ContextType>
-  automationStatus?: Resolver<Maybe<ResolversTypes['AutomationsStatus']>, ParentType, ContextType>
+  automationsStatus?: Resolver<Maybe<ResolversTypes['TriggeredAutomationsStatus']>, ParentType, ContextType>
   commentThreads?: Resolver<
     ResolversTypes['CommentCollection'],
     ParentType,
@@ -5062,12 +7535,21 @@ export type VersionResolvers<
     RequireFields<VersionCommentThreadsArgs, 'limit'>
   >
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  gendoAIRender?: Resolver<
+    ResolversTypes['GendoAIRender'],
+    ParentType,
+    ContextType,
+    RequireFields<VersionGendoAiRenderArgs, 'id'>
+  >
+  gendoAIRenders?: Resolver<ResolversTypes['GendoAIRenderCollection'], ParentType, ContextType>
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
   model?: Resolver<ResolversTypes['Model'], ParentType, ContextType>
+  parents?: Resolver<Maybe<Array<Maybe<ResolversTypes['String']>>>, ParentType, ContextType>
   previewUrl?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   referencedObject?: Resolver<ResolversTypes['String'], ParentType, ContextType>
   sourceApplication?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  totalChildrenCount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
@@ -5081,21 +7563,59 @@ export type VersionCollectionResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
+export type VersionCreatedTriggerResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['VersionCreatedTrigger'] = ResolversParentTypes['VersionCreatedTrigger'],
+> = {
+  model?: Resolver<Maybe<ResolversTypes['Model']>, ParentType, ContextType>
+  type?: Resolver<ResolversTypes['AutomateRunTriggerType'], ParentType, ContextType>
+  version?: Resolver<Maybe<ResolversTypes['Version']>, ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type VersionCreatedTriggerDefinitionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['VersionCreatedTriggerDefinition'] = ResolversParentTypes['VersionCreatedTriggerDefinition'],
+> = {
+  model?: Resolver<Maybe<ResolversTypes['Model']>, ParentType, ContextType>
+  type?: Resolver<ResolversTypes['AutomateRunTriggerType'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
 export type VersionMutationsResolvers<
   ContextType = any,
   ParentType extends ResolversParentTypes['VersionMutations'] = ResolversParentTypes['VersionMutations'],
 > = {
+  create?: Resolver<
+    ResolversTypes['Version'],
+    ParentType,
+    ContextType,
+    RequireFields<VersionMutationsCreateArgs, 'input'>
+  >
   delete?: Resolver<
     ResolversTypes['Boolean'],
     ParentType,
     ContextType,
     RequireFields<VersionMutationsDeleteArgs, 'input'>
   >
+  markReceived?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<VersionMutationsMarkReceivedArgs, 'input'>
+  >
   moveToModel?: Resolver<
     ResolversTypes['Model'],
     ParentType,
     ContextType,
     RequireFields<VersionMutationsMoveToModelArgs, 'input'>
+  >
+  requestGendoAIRender?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<VersionMutationsRequestGendoAiRenderArgs, 'input'>
   >
   update?: Resolver<
     ResolversTypes['Version'],
@@ -5192,6 +7712,246 @@ export type WebhookEventCollectionResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
 }
 
+export type WorkspaceResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['Workspace'] = ResolversParentTypes['Workspace'],
+> = {
+  billing?: Resolver<Maybe<ResolversTypes['WorkspaceBilling']>, ParentType, ContextType>
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  defaultLogoIndex?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  defaultProjectRole?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  discoverabilityEnabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  domainBasedMembershipProtectionEnabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>
+  domains?: Resolver<Maybe<Array<ResolversTypes['WorkspaceDomain']>>, ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  invitedTeam?: Resolver<
+    Maybe<Array<ResolversTypes['PendingWorkspaceCollaborator']>>,
+    ParentType,
+    ContextType,
+    Partial<WorkspaceInvitedTeamArgs>
+  >
+  logo?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  projects?: Resolver<
+    ResolversTypes['ProjectCollection'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceProjectsArgs, 'limit'>
+  >
+  role?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  slug?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  team?: Resolver<
+    ResolversTypes['WorkspaceCollaboratorCollection'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceTeamArgs, 'limit'>
+  >
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceBillingResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceBilling'] = ResolversParentTypes['WorkspaceBilling'],
+> = {
+  cost?: Resolver<ResolversTypes['WorkspaceCost'], ParentType, ContextType>
+  versionsCount?: Resolver<ResolversTypes['WorkspaceVersionsCount'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCollaboratorResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceCollaborator'] = ResolversParentTypes['WorkspaceCollaborator'],
+> = {
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  projectRoles?: Resolver<Array<ResolversTypes['ProjectRole']>, ParentType, ContextType>
+  role?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  user?: Resolver<ResolversTypes['LimitedUser'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCollaboratorCollectionResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['WorkspaceCollaboratorCollection'] = ResolversParentTypes['WorkspaceCollaboratorCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['WorkspaceCollaborator']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCollectionResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceCollection'] = ResolversParentTypes['WorkspaceCollection'],
+> = {
+  cursor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['Workspace']>, ParentType, ContextType>
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCostResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceCost'] = ResolversParentTypes['WorkspaceCost'],
+> = {
+  currency?: Resolver<ResolversTypes['Currency'], ParentType, ContextType>
+  discount?: Resolver<Maybe<ResolversTypes['WorkspaceCostDiscount']>, ParentType, ContextType>
+  items?: Resolver<Array<ResolversTypes['WorkspaceCostItem']>, ParentType, ContextType>
+  subTotal?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
+  total?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCostDiscountResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceCostDiscount'] = ResolversParentTypes['WorkspaceCostDiscount'],
+> = {
+  amount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceCostItemResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceCostItem'] = ResolversParentTypes['WorkspaceCostItem'],
+> = {
+  cost?: Resolver<ResolversTypes['Float'], ParentType, ContextType>
+  count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  label?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceDomainResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceDomain'] = ResolversParentTypes['WorkspaceDomain'],
+> = {
+  domain?: Resolver<ResolversTypes['String'], ParentType, ContextType>
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceInviteMutationsResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['WorkspaceInviteMutations'] = ResolversParentTypes['WorkspaceInviteMutations'],
+> = {
+  batchCreate?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceInviteMutationsBatchCreateArgs, 'input' | 'workspaceId'>
+  >
+  cancel?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceInviteMutationsCancelArgs, 'inviteId' | 'workspaceId'>
+  >
+  create?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceInviteMutationsCreateArgs, 'input' | 'workspaceId'>
+  >
+  resend?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceInviteMutationsResendArgs, 'input'>
+  >
+  use?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceInviteMutationsUseArgs, 'input'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceMutationsResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceMutations'] = ResolversParentTypes['WorkspaceMutations'],
+> = {
+  addDomain?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsAddDomainArgs, 'input'>
+  >
+  create?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsCreateArgs, 'input'>
+  >
+  delete?: Resolver<
+    ResolversTypes['Boolean'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsDeleteArgs, 'workspaceId'>
+  >
+  deleteDomain?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsDeleteDomainArgs, 'input'>
+  >
+  invites?: Resolver<ResolversTypes['WorkspaceInviteMutations'], ParentType, ContextType>
+  join?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsJoinArgs, 'input'>
+  >
+  leave?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<WorkspaceMutationsLeaveArgs, 'id'>>
+  projects?: Resolver<ResolversTypes['WorkspaceProjectMutations'], ParentType, ContextType>
+  update?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsUpdateArgs, 'input'>
+  >
+  updateRole?: Resolver<
+    ResolversTypes['Workspace'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceMutationsUpdateRoleArgs, 'input'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceProjectMutationsResolvers<
+  ContextType = any,
+  ParentType extends
+    ResolversParentTypes['WorkspaceProjectMutations'] = ResolversParentTypes['WorkspaceProjectMutations'],
+> = {
+  moveToWorkspace?: Resolver<
+    ResolversTypes['Project'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceProjectMutationsMoveToWorkspaceArgs, 'projectId' | 'workspaceId'>
+  >
+  updateRole?: Resolver<
+    ResolversTypes['Project'],
+    ParentType,
+    ContextType,
+    RequireFields<WorkspaceProjectMutationsUpdateRoleArgs, 'input'>
+  >
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
+export type WorkspaceVersionsCountResolvers<
+  ContextType = any,
+  ParentType extends ResolversParentTypes['WorkspaceVersionsCount'] = ResolversParentTypes['WorkspaceVersionsCount'],
+> = {
+  current?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  max?: Resolver<ResolversTypes['Int'], ParentType, ContextType>
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>
+}
+
 export type Resolvers<ContextType = any> = {
   ActiveUserMutations?: ActiveUserMutationsResolvers<ContextType>
   Activity?: ActivityResolvers<ContextType>
@@ -5205,10 +7965,23 @@ export type Resolvers<ContextType = any> = {
   ApiToken?: ApiTokenResolvers<ContextType>
   AppAuthor?: AppAuthorResolvers<ContextType>
   AuthStrategy?: AuthStrategyResolvers<ContextType>
-  AutomationFunctionRun?: AutomationFunctionRunResolvers<ContextType>
-  AutomationMutations?: AutomationMutationsResolvers<ContextType>
-  AutomationRun?: AutomationRunResolvers<ContextType>
-  AutomationsStatus?: AutomationsStatusResolvers<ContextType>
+  AutomateFunction?: AutomateFunctionResolvers<ContextType>
+  AutomateFunctionCollection?: AutomateFunctionCollectionResolvers<ContextType>
+  AutomateFunctionRelease?: AutomateFunctionReleaseResolvers<ContextType>
+  AutomateFunctionReleaseCollection?: AutomateFunctionReleaseCollectionResolvers<ContextType>
+  AutomateFunctionRun?: AutomateFunctionRunResolvers<ContextType>
+  AutomateFunctionTemplate?: AutomateFunctionTemplateResolvers<ContextType>
+  AutomateMutations?: AutomateMutationsResolvers<ContextType>
+  AutomateRun?: AutomateRunResolvers<ContextType>
+  AutomateRunCollection?: AutomateRunCollectionResolvers<ContextType>
+  Automation?: AutomationResolvers<ContextType>
+  AutomationCollection?: AutomationCollectionResolvers<ContextType>
+  AutomationRevision?: AutomationRevisionResolvers<ContextType>
+  AutomationRevisionFunction?: AutomationRevisionFunctionResolvers<ContextType>
+  AutomationRevisionTriggerDefinition?: AutomationRevisionTriggerDefinitionResolvers<ContextType>
+  AutomationRunTrigger?: AutomationRunTriggerResolvers<ContextType>
+  AvatarUser?: AvatarUserResolvers<ContextType>
+  BasicGitRepositoryMetadata?: BasicGitRepositoryMetadataResolvers<ContextType>
   BigInt?: GraphQLScalarType
   BlobMetadata?: BlobMetadataResolvers<ContextType>
   BlobMetadataCollection?: BlobMetadataCollectionResolvers<ContextType>
@@ -5223,9 +7996,12 @@ export type Resolvers<ContextType = any> = {
   CommentThreadActivityMessage?: CommentThreadActivityMessageResolvers<ContextType>
   Commit?: CommitResolvers<ContextType>
   CommitCollection?: CommitCollectionResolvers<ContextType>
+  CountOnlyCollection?: CountOnlyCollectionResolvers<ContextType>
   DateTime?: GraphQLScalarType
-  EmailAddress?: GraphQLScalarType
+  DiscoverableWorkspace?: DiscoverableWorkspaceResolvers<ContextType>
   FileUpload?: FileUploadResolvers<ContextType>
+  GendoAIRender?: GendoAiRenderResolvers<ContextType>
+  GendoAIRenderCollection?: GendoAiRenderCollectionResolvers<ContextType>
   JSONObject?: GraphQLScalarType
   LegacyCommentViewerData?: LegacyCommentViewerDataResolvers<ContextType>
   LimitedUser?: LimitedUserResolvers<ContextType>
@@ -5240,8 +8016,12 @@ export type Resolvers<ContextType = any> = {
   PasswordStrengthCheckFeedback?: PasswordStrengthCheckFeedbackResolvers<ContextType>
   PasswordStrengthCheckResults?: PasswordStrengthCheckResultsResolvers<ContextType>
   PendingStreamCollaborator?: PendingStreamCollaboratorResolvers<ContextType>
+  PendingWorkspaceCollaborator?: PendingWorkspaceCollaboratorResolvers<ContextType>
   Project?: ProjectResolvers<ContextType>
-  ProjectAutomationsStatusUpdatedMessage?: ProjectAutomationsStatusUpdatedMessageResolvers<ContextType>
+  ProjectAccessRequest?: ProjectAccessRequestResolvers<ContextType>
+  ProjectAccessRequestMutations?: ProjectAccessRequestMutationsResolvers<ContextType>
+  ProjectAutomationMutations?: ProjectAutomationMutationsResolvers<ContextType>
+  ProjectAutomationsUpdatedMessage?: ProjectAutomationsUpdatedMessageResolvers<ContextType>
   ProjectCollaborator?: ProjectCollaboratorResolvers<ContextType>
   ProjectCollection?: ProjectCollectionResolvers<ContextType>
   ProjectCommentCollection?: ProjectCommentCollectionResolvers<ContextType>
@@ -5252,6 +8032,8 @@ export type Resolvers<ContextType = any> = {
   ProjectMutations?: ProjectMutationsResolvers<ContextType>
   ProjectPendingModelsUpdatedMessage?: ProjectPendingModelsUpdatedMessageResolvers<ContextType>
   ProjectPendingVersionsUpdatedMessage?: ProjectPendingVersionsUpdatedMessageResolvers<ContextType>
+  ProjectRole?: ProjectRoleResolvers<ContextType>
+  ProjectTriggeredAutomationsStatusUpdatedMessage?: ProjectTriggeredAutomationsStatusUpdatedMessageResolvers<ContextType>
   ProjectUpdatedMessage?: ProjectUpdatedMessageResolvers<ContextType>
   ProjectVersionsPreviewGeneratedMessage?: ProjectVersionsPreviewGeneratedMessageResolvers<ContextType>
   ProjectVersionsUpdatedMessage?: ProjectVersionsUpdatedMessageResolvers<ContextType>
@@ -5261,23 +8043,36 @@ export type Resolvers<ContextType = any> = {
   Scope?: ScopeResolvers<ContextType>
   ServerApp?: ServerAppResolvers<ContextType>
   ServerAppListItem?: ServerAppListItemResolvers<ContextType>
+  ServerAutomateInfo?: ServerAutomateInfoResolvers<ContextType>
+  ServerConfiguration?: ServerConfigurationResolvers<ContextType>
   ServerInfo?: ServerInfoResolvers<ContextType>
   ServerInvite?: ServerInviteResolvers<ContextType>
+  ServerMigration?: ServerMigrationResolvers<ContextType>
   ServerRoleItem?: ServerRoleItemResolvers<ContextType>
   ServerStatistics?: ServerStatisticsResolvers<ContextType>
   ServerStats?: ServerStatsResolvers<ContextType>
+  ServerWorkspacesInfo?: ServerWorkspacesInfoResolvers<ContextType>
   SmartTextEditorValue?: SmartTextEditorValueResolvers<ContextType>
   Stream?: StreamResolvers<ContextType>
   StreamAccessRequest?: StreamAccessRequestResolvers<ContextType>
   StreamCollaborator?: StreamCollaboratorResolvers<ContextType>
   StreamCollection?: StreamCollectionResolvers<ContextType>
   Subscription?: SubscriptionResolvers<ContextType>
-  TestItem?: TestItemResolvers<ContextType>
+  TestAutomationRun?: TestAutomationRunResolvers<ContextType>
+  TestAutomationRunTrigger?: TestAutomationRunTriggerResolvers<ContextType>
+  TestAutomationRunTriggerPayload?: TestAutomationRunTriggerPayloadResolvers<ContextType>
+  TokenResourceIdentifier?: TokenResourceIdentifierResolvers<ContextType>
+  TriggeredAutomationsStatus?: TriggeredAutomationsStatusResolvers<ContextType>
   User?: UserResolvers<ContextType>
+  UserAutomateInfo?: UserAutomateInfoResolvers<ContextType>
+  UserEmail?: UserEmailResolvers<ContextType>
+  UserEmailMutations?: UserEmailMutationsResolvers<ContextType>
   UserProjectsUpdatedMessage?: UserProjectsUpdatedMessageResolvers<ContextType>
   UserSearchResultCollection?: UserSearchResultCollectionResolvers<ContextType>
   Version?: VersionResolvers<ContextType>
   VersionCollection?: VersionCollectionResolvers<ContextType>
+  VersionCreatedTrigger?: VersionCreatedTriggerResolvers<ContextType>
+  VersionCreatedTriggerDefinition?: VersionCreatedTriggerDefinitionResolvers<ContextType>
   VersionMutations?: VersionMutationsResolvers<ContextType>
   ViewerResourceGroup?: ViewerResourceGroupResolvers<ContextType>
   ViewerResourceItem?: ViewerResourceItemResolvers<ContextType>
@@ -5286,6 +8081,19 @@ export type Resolvers<ContextType = any> = {
   WebhookCollection?: WebhookCollectionResolvers<ContextType>
   WebhookEvent?: WebhookEventResolvers<ContextType>
   WebhookEventCollection?: WebhookEventCollectionResolvers<ContextType>
+  Workspace?: WorkspaceResolvers<ContextType>
+  WorkspaceBilling?: WorkspaceBillingResolvers<ContextType>
+  WorkspaceCollaborator?: WorkspaceCollaboratorResolvers<ContextType>
+  WorkspaceCollaboratorCollection?: WorkspaceCollaboratorCollectionResolvers<ContextType>
+  WorkspaceCollection?: WorkspaceCollectionResolvers<ContextType>
+  WorkspaceCost?: WorkspaceCostResolvers<ContextType>
+  WorkspaceCostDiscount?: WorkspaceCostDiscountResolvers<ContextType>
+  WorkspaceCostItem?: WorkspaceCostItemResolvers<ContextType>
+  WorkspaceDomain?: WorkspaceDomainResolvers<ContextType>
+  WorkspaceInviteMutations?: WorkspaceInviteMutationsResolvers<ContextType>
+  WorkspaceMutations?: WorkspaceMutationsResolvers<ContextType>
+  WorkspaceProjectMutations?: WorkspaceProjectMutationsResolvers<ContextType>
+  WorkspaceVersionsCount?: WorkspaceVersionsCountResolvers<ContextType>
 }
 
 export type DirectiveResolvers<ContextType = any> = {
@@ -5293,7 +8101,9 @@ export type DirectiveResolvers<ContextType = any> = {
   hasScopes?: HasScopesDirectiveResolver<any, any, ContextType>
   hasServerRole?: HasServerRoleDirectiveResolver<any, any, ContextType>
   hasStreamRole?: HasStreamRoleDirectiveResolver<any, any, ContextType>
+  hasWorkspaceRole?: HasWorkspaceRoleDirectiveResolver<any, any, ContextType>
   isOwner?: IsOwnerDirectiveResolver<any, any, ContextType>
+  oneOf?: OneOfDirectiveResolver<any, any, ContextType>
 }
 
 export type GetStreamsQueryVariables = Exact<{ [key: string]: never }>
@@ -5302,6 +8112,7 @@ export type GetStreamsQuery = {
   __typename?: 'Query'
   activeUser?: {
     __typename?: 'User'
+    id: string
     projects: {
       __typename?: 'ProjectCollection'
       items: Array<{
@@ -5309,10 +8120,10 @@ export type GetStreamsQuery = {
         id: string
         name: string
         description?: string | null
-        models: {
-          __typename?: 'ModelCollection'
+        versions: {
+          __typename?: 'VersionCollection'
           totalCount: number
-          items: Array<{ __typename?: 'Model'; previewUrl?: string | null }>
+          items: Array<{ __typename?: 'Version'; previewUrl: string }>
         }
       }>
     }
@@ -5333,38 +8144,60 @@ export type GetUserQuery = {
   } | null
 }
 
-export type GetStreamQueryVariables = Exact<{
+export type GetLatestVersionQueryVariables = Exact<{
+  projectId: Scalars['String']['input']
+  modelId: Scalars['String']['input']
+}>
+
+export type GetLatestVersionQuery = {
+  __typename?: 'Query'
+  project: {
+    __typename?: 'Project'
+    id: string
+    model: {
+      __typename?: 'Model'
+      id: string
+      versions: {
+        __typename?: 'VersionCollection'
+        items: Array<{ __typename?: 'Version'; id: string; referencedObject: string }>
+      }
+    }
+  }
+}
+
+export type GetProjectQueryVariables = Exact<{
   projectId: Scalars['String']['input']
 }>
 
-export type GetStreamQuery = {
+export type GetProjectQuery = {
   __typename?: 'Query'
-  stream?: {
-    __typename?: 'Stream'
+  project: {
+    __typename?: 'Project'
+    id: string
     name: string
-    branches?: {
-      __typename?: 'BranchCollection'
-      items?: Array<{
-        __typename?: 'Branch'
-        name: string
-        commits?: {
-          __typename?: 'CommitCollection'
-          items?: Array<{ __typename?: 'Commit'; referencedObject: string }> | null
-        } | null
-      }> | null
-    } | null
-  } | null
+    models: { __typename?: 'ModelCollection'; items: Array<{ __typename?: 'Model'; name: string; id: string }> }
+  }
+}
+
+export type GetProjectNameQueryVariables = Exact<{
+  projectId: Scalars['String']['input']
+}>
+
+export type GetProjectNameQuery = {
+  __typename?: 'Query'
+  project: { __typename?: 'Project'; id: string; name: string }
 }
 
 export const GetStreamsDocument = gql`
   query getStreams {
     activeUser {
+      id
       projects {
         items {
           id
           name
           description
-          models {
+          versions {
             items {
               previewUrl
             }
@@ -5402,9 +8235,9 @@ export function useGetStreamsLazyQuery(
   return Apollo.useLazyQuery<GetStreamsQuery, GetStreamsQueryVariables>(GetStreamsDocument, options)
 }
 export function useGetStreamsSuspenseQuery(
-  baseOptions?: Apollo.SuspenseQueryHookOptions<GetStreamsQuery, GetStreamsQueryVariables>,
+  baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetStreamsQuery, GetStreamsQueryVariables>,
 ) {
-  const options = { ...defaultOptions, ...baseOptions }
+  const options = baseOptions === Apollo.skipToken ? baseOptions : { ...defaultOptions, ...baseOptions }
   return Apollo.useSuspenseQuery<GetStreamsQuery, GetStreamsQueryVariables>(GetStreamsDocument, options)
 }
 export type GetStreamsQueryHookResult = ReturnType<typeof useGetStreamsQuery>
@@ -5447,26 +8280,25 @@ export function useGetUserLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Ge
   return Apollo.useLazyQuery<GetUserQuery, GetUserQueryVariables>(GetUserDocument, options)
 }
 export function useGetUserSuspenseQuery(
-  baseOptions?: Apollo.SuspenseQueryHookOptions<GetUserQuery, GetUserQueryVariables>,
+  baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetUserQuery, GetUserQueryVariables>,
 ) {
-  const options = { ...defaultOptions, ...baseOptions }
+  const options = baseOptions === Apollo.skipToken ? baseOptions : { ...defaultOptions, ...baseOptions }
   return Apollo.useSuspenseQuery<GetUserQuery, GetUserQueryVariables>(GetUserDocument, options)
 }
 export type GetUserQueryHookResult = ReturnType<typeof useGetUserQuery>
 export type GetUserLazyQueryHookResult = ReturnType<typeof useGetUserLazyQuery>
 export type GetUserSuspenseQueryHookResult = ReturnType<typeof useGetUserSuspenseQuery>
 export type GetUserQueryResult = Apollo.QueryResult<GetUserQuery, GetUserQueryVariables>
-export const GetStreamDocument = gql`
-  query getStream($projectId: String!) {
-    stream(id: $projectId) {
-      name
-      branches {
-        items {
-          name
-          commits {
-            items {
-              referencedObject
-            }
+export const GetLatestVersionDocument = gql`
+  query getLatestVersion($projectId: String!, $modelId: String!) {
+    project(id: $projectId) {
+      id
+      model(id: $modelId) {
+        id
+        versions(limit: 1) {
+          items {
+            id
+            referencedObject
           }
         }
       }
@@ -5475,38 +8307,149 @@ export const GetStreamDocument = gql`
 `
 
 /**
- * __useGetStreamQuery__
+ * __useGetLatestVersionQuery__
  *
- * To run a query within a React component, call `useGetStreamQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetStreamQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useGetLatestVersionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetLatestVersionQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useGetStreamQuery({
+ * const { data, loading, error } = useGetLatestVersionQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      modelId: // value for 'modelId'
+ *   },
+ * });
+ */
+export function useGetLatestVersionQuery(
+  baseOptions: Apollo.QueryHookOptions<GetLatestVersionQuery, GetLatestVersionQueryVariables> &
+    ({ variables: GetLatestVersionQueryVariables; skip?: boolean } | { skip: boolean }),
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useQuery<GetLatestVersionQuery, GetLatestVersionQueryVariables>(GetLatestVersionDocument, options)
+}
+export function useGetLatestVersionLazyQuery(
+  baseOptions?: Apollo.LazyQueryHookOptions<GetLatestVersionQuery, GetLatestVersionQueryVariables>,
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useLazyQuery<GetLatestVersionQuery, GetLatestVersionQueryVariables>(GetLatestVersionDocument, options)
+}
+export function useGetLatestVersionSuspenseQuery(
+  baseOptions?:
+    | Apollo.SkipToken
+    | Apollo.SuspenseQueryHookOptions<GetLatestVersionQuery, GetLatestVersionQueryVariables>,
+) {
+  const options = baseOptions === Apollo.skipToken ? baseOptions : { ...defaultOptions, ...baseOptions }
+  return Apollo.useSuspenseQuery<GetLatestVersionQuery, GetLatestVersionQueryVariables>(
+    GetLatestVersionDocument,
+    options,
+  )
+}
+export type GetLatestVersionQueryHookResult = ReturnType<typeof useGetLatestVersionQuery>
+export type GetLatestVersionLazyQueryHookResult = ReturnType<typeof useGetLatestVersionLazyQuery>
+export type GetLatestVersionSuspenseQueryHookResult = ReturnType<typeof useGetLatestVersionSuspenseQuery>
+export type GetLatestVersionQueryResult = Apollo.QueryResult<GetLatestVersionQuery, GetLatestVersionQueryVariables>
+export const GetProjectDocument = gql`
+  query getProject($projectId: String!) {
+    project(id: $projectId) {
+      id
+      name
+      models {
+        items {
+          name
+          id
+        }
+      }
+    }
+  }
+`
+
+/**
+ * __useGetProjectQuery__
+ *
+ * To run a query within a React component, call `useGetProjectQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetProjectQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetProjectQuery({
  *   variables: {
  *      projectId: // value for 'projectId'
  *   },
  * });
  */
-export function useGetStreamQuery(baseOptions: Apollo.QueryHookOptions<GetStreamQuery, GetStreamQueryVariables>) {
-  const options = { ...defaultOptions, ...baseOptions }
-  return Apollo.useQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
-}
-export function useGetStreamLazyQuery(
-  baseOptions?: Apollo.LazyQueryHookOptions<GetStreamQuery, GetStreamQueryVariables>,
+export function useGetProjectQuery(
+  baseOptions: Apollo.QueryHookOptions<GetProjectQuery, GetProjectQueryVariables> &
+    ({ variables: GetProjectQueryVariables; skip?: boolean } | { skip: boolean }),
 ) {
   const options = { ...defaultOptions, ...baseOptions }
-  return Apollo.useLazyQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
+  return Apollo.useQuery<GetProjectQuery, GetProjectQueryVariables>(GetProjectDocument, options)
 }
-export function useGetStreamSuspenseQuery(
-  baseOptions?: Apollo.SuspenseQueryHookOptions<GetStreamQuery, GetStreamQueryVariables>,
+export function useGetProjectLazyQuery(
+  baseOptions?: Apollo.LazyQueryHookOptions<GetProjectQuery, GetProjectQueryVariables>,
 ) {
   const options = { ...defaultOptions, ...baseOptions }
-  return Apollo.useSuspenseQuery<GetStreamQuery, GetStreamQueryVariables>(GetStreamDocument, options)
+  return Apollo.useLazyQuery<GetProjectQuery, GetProjectQueryVariables>(GetProjectDocument, options)
 }
-export type GetStreamQueryHookResult = ReturnType<typeof useGetStreamQuery>
-export type GetStreamLazyQueryHookResult = ReturnType<typeof useGetStreamLazyQuery>
-export type GetStreamSuspenseQueryHookResult = ReturnType<typeof useGetStreamSuspenseQuery>
-export type GetStreamQueryResult = Apollo.QueryResult<GetStreamQuery, GetStreamQueryVariables>
+export function useGetProjectSuspenseQuery(
+  baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetProjectQuery, GetProjectQueryVariables>,
+) {
+  const options = baseOptions === Apollo.skipToken ? baseOptions : { ...defaultOptions, ...baseOptions }
+  return Apollo.useSuspenseQuery<GetProjectQuery, GetProjectQueryVariables>(GetProjectDocument, options)
+}
+export type GetProjectQueryHookResult = ReturnType<typeof useGetProjectQuery>
+export type GetProjectLazyQueryHookResult = ReturnType<typeof useGetProjectLazyQuery>
+export type GetProjectSuspenseQueryHookResult = ReturnType<typeof useGetProjectSuspenseQuery>
+export type GetProjectQueryResult = Apollo.QueryResult<GetProjectQuery, GetProjectQueryVariables>
+export const GetProjectNameDocument = gql`
+  query getProjectName($projectId: String!) {
+    project(id: $projectId) {
+      id
+      name
+    }
+  }
+`
+
+/**
+ * __useGetProjectNameQuery__
+ *
+ * To run a query within a React component, call `useGetProjectNameQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetProjectNameQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetProjectNameQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useGetProjectNameQuery(
+  baseOptions: Apollo.QueryHookOptions<GetProjectNameQuery, GetProjectNameQueryVariables> &
+    ({ variables: GetProjectNameQueryVariables; skip?: boolean } | { skip: boolean }),
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useQuery<GetProjectNameQuery, GetProjectNameQueryVariables>(GetProjectNameDocument, options)
+}
+export function useGetProjectNameLazyQuery(
+  baseOptions?: Apollo.LazyQueryHookOptions<GetProjectNameQuery, GetProjectNameQueryVariables>,
+) {
+  const options = { ...defaultOptions, ...baseOptions }
+  return Apollo.useLazyQuery<GetProjectNameQuery, GetProjectNameQueryVariables>(GetProjectNameDocument, options)
+}
+export function useGetProjectNameSuspenseQuery(
+  baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetProjectNameQuery, GetProjectNameQueryVariables>,
+) {
+  const options = baseOptions === Apollo.skipToken ? baseOptions : { ...defaultOptions, ...baseOptions }
+  return Apollo.useSuspenseQuery<GetProjectNameQuery, GetProjectNameQueryVariables>(GetProjectNameDocument, options)
+}
+export type GetProjectNameQueryHookResult = ReturnType<typeof useGetProjectNameQuery>
+export type GetProjectNameLazyQueryHookResult = ReturnType<typeof useGetProjectNameLazyQuery>
+export type GetProjectNameSuspenseQueryHookResult = ReturnType<typeof useGetProjectNameSuspenseQuery>
+export type GetProjectNameQueryResult = Apollo.QueryResult<GetProjectNameQuery, GetProjectNameQueryVariables>

@@ -1,23 +1,19 @@
-import React, { ReactNode } from 'react'
+import { createContext, ReactNode, useState } from 'react'
+import { deleteCookie, getCookie, setCookie } from './cookies.ts'
 
-export const APP_NAME = 'SpeckleReactDemo'
-export const TOKEN = `${APP_NAME}.AuthToken`
-export const REFRESH_TOKEN = `${APP_NAME}.RefreshToken`
-export const CHALLENGE = `${APP_NAME}.Challenge`
-
-export const SERVER_URL = import.meta.env.VITE_SPECKLE_SERVER_URL ?? 'https://speckle.xyz'
-const SPECKLE_APP_ID = import.meta.env.VITE_SPECKLE_APP_ID ?? ''
-const SPECKLE_APP_SECRET = import.meta.env.VITE_SPECKLE_APP_SECRET ?? ''
+const TOKEN = `${import.meta.env.VITE_APP_NAME}.AuthToken`
+const REFRESH_TOKEN = `${import.meta.env.VITE_APP_NAME}.RefreshToken`
+const CHALLENGE = `${import.meta.env.VITE_APP_NAME}.Challenge`
 
 interface AuthContextInterface {
-  token: string | null
-  refreshToken: string | null
+  token: string | undefined
+  refreshToken: string | undefined
   login: () => void
   exchangeAccessCode(accessCode: string): Promise<void>
   logOut: () => void
 }
 
-export const AuthContext = React.createContext({} as AuthContextInterface)
+export const AuthContext = createContext({} as AuthContextInterface)
 
 type AuthProviderProps = {
   children: ReactNode
@@ -26,8 +22,8 @@ type AuthProviderProps = {
 // Create an auth provider
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Get the token and refreshToken from localStorage
-  const [token, setToken] = React.useState(localStorage.getItem(TOKEN))
-  const [refreshToken, setRefreshToken] = React.useState(localStorage.getItem(REFRESH_TOKEN))
+  const [token, setToken] = useState(getCookie(TOKEN))
+  const [refreshToken, setRefreshToken] = useState(getCookie(REFRESH_TOKEN))
 
   // Create a login function that redirects to the Speckle server authentication page
   const login = () => {
@@ -36,28 +32,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Save challenge in localStorage
     localStorage.setItem(CHALLENGE, challenge)
     // Send user to auth page
-    window.location = `${SERVER_URL}/authn/verify/${SPECKLE_APP_ID}/${challenge}` as unknown as Location
+    window.location =
+      `${import.meta.env.VITE_SPECKLE_SERVER_URL}/authn/verify/${import.meta.env.VITE_SPECKLE_APP_ID}/${challenge}` as unknown as Location
   }
 
   // Create a logOut function that removes the token and refreshToken from localStorage
   const logOut = () => {
-    localStorage.removeItem(TOKEN)
-    localStorage.removeItem(REFRESH_TOKEN)
-    setToken(null)
-    setRefreshToken(null)
+    deleteCookie(TOKEN)
+    deleteCookie(REFRESH_TOKEN)
+    setToken(undefined)
+    setRefreshToken(undefined)
   }
 
   // Create an exchangeAccessCode function that exchanges the provided access code with a token/refreshToken pair, and saves them to local storage.
   const exchangeAccessCode = async (accessCode: string) => {
-    const res = await fetch(`${SERVER_URL}/auth/token/`, {
+    const res = await fetch(`${import.meta.env.VITE_SPECKLE_SERVER_URL}/auth/token/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         accessCode: accessCode,
-        appId: SPECKLE_APP_ID,
-        appSecret: SPECKLE_APP_SECRET,
+        appId: import.meta.env.VITE_SPECKLE_APP_ID,
+        appSecret: import.meta.env.VITE_SPECKLE_APP_SECRET,
         challenge: localStorage.getItem(CHALLENGE),
       }),
     })
@@ -66,8 +63,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (data.token) {
       // If retrieving the token was successful, remove challenge and set the new token and refresh token
       localStorage.removeItem(CHALLENGE)
-      localStorage.setItem(TOKEN, data.token)
-      localStorage.setItem(REFRESH_TOKEN, data.refreshToken)
+      setCookie({ name: TOKEN, value: data.token })
+      setCookie({ name: REFRESH_TOKEN, value: data.refreshToken })
       setToken(data.token)
       setRefreshToken(data.refreshToken)
     }
@@ -87,6 +84,3 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     </AuthContext.Provider>
   )
 }
-
-// Create a hook to use the auth context
-export const useAuth = () => React.useContext(AuthContext)

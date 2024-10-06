@@ -1,11 +1,12 @@
 query getStreams {
     activeUser {
+        id
         projects {
             items {
                 id
                 name
                 description
-                models {
+                versions {
                     items {
                         previewUrl
                     }
@@ -15,7 +16,6 @@ query getStreams {
         }
     }
 }
-
 
 query getUser {
     activeUser {
@@ -27,18 +27,37 @@ query getUser {
     }
 }
 
-query getStream($projectId: String!){
-    stream(id: $projectId){
-        name
-        branches {
-            items {
-                name
-                commits{
-                    items {
-                        referencedObject
-                    }
+query getLatestVersion($projectId: String!, $modelId: String!) {
+    project(id: $projectId) {
+        id
+        model(id: $modelId) {
+            id
+            versions(limit: 1) {
+                items {
+                    id
+                    referencedObject
                 }
             }
         }
+    }
+}
+
+query getProject($projectId: String!) {
+    project(id: $projectId) {
+        id
+        name
+        models {
+            items {
+                name
+                id
+            }
+        }
+    }
+}
+
+query getProjectName($projectId: String!) {
+    project(id: $projectId) {
+        id
+        name
     }
 }

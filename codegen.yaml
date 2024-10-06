@@ -1,5 +1,5 @@
 overwrite: true
-schema: 'https://speckle.xyz/graphql'
+schema: 'https://app.speckle.systems/graphql'
 documents: 'src/queries/*.graphql'
 hooks:
   afterAllFileWrite:

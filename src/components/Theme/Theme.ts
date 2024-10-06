@@ -24,6 +24,9 @@ export const theme = createTheme({
   black: '#2e2e2e',
   primaryColor: 'yellow',
   primaryShade: 3,
+  other: {
+    backgroundColor: '#f5f5f5',
+  },
   colors: {
     yellow: [
       '#fff9e2',
