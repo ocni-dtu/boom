@@ -1,9 +1,10 @@
 import { ReactNode, useMemo } from 'react'
 
-import { ApolloClient, ApolloProvider, createHttpLink, InMemoryCache } from '@apollo/client'
+import { ApolloClient, ApolloProvider, createHttpLink, from, InMemoryCache } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
 
-import { SERVER_URL, useAuth } from '@contexts'
+import { useAuth } from '@contexts'
+import { RestLink } from 'apollo-link-rest'
 
 type GraphQlProviderProps = {
   children: ReactNode
@@ -13,7 +14,7 @@ export const GraphQlProvider = ({ children }: GraphQlProviderProps) => {
   const { token } = useAuth()
 
   const speckleServerLink = createHttpLink({
-    uri: `${SERVER_URL}/graphql`,
+    uri: `${import.meta.env.VITE_SPECKLE_SERVER_URL}/graphql`,
   })
 
   const authLink = useMemo(
@@ -30,14 +31,34 @@ export const GraphQlProvider = ({ children }: GraphQlProviderProps) => {
       }),
     [token],
   )
+  const restLink = useMemo(
+    () =>
+      new RestLink({
+        uri: import.meta.env.VITE_SPECKLE_SERVER_URL,
+        headers: {
+          authorization: token ? `Bearer ${token}` : '',
+        },
+        responseTransformer: async (response: Response) => {
+          if (response.headers.get('content-type')?.includes('application/json')) {
+            return await response.json()
+          } else if (response.headers.get('content-type')?.includes('image/png')) {
+            const preview = window.URL.createObjectURL(await response.blob())
+            return { url: preview, id: response.url.split('/').pop() }
+          } else {
+            return await response.text()
+          }
+        },
+      }),
+    [token],
+  )
 
   const client = useMemo(
     () =>
       new ApolloClient({
-        link: authLink.concat(speckleServerLink),
-        cache: new InMemoryCache(),
+        link: from([restLink, authLink, speckleServerLink]),
+        cache: new InMemoryCache({}),
       }),
-    [authLink, speckleServerLink],
+    [authLink, speckleServerLink, restLink],
   )
 
   return <ApolloProvider client={client}>{children}</ApolloProvider>

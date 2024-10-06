@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useMemo } from 'react'
+import { createContext, ReactNode, useMemo } from 'react'
 import { useGetUserQuery, User } from '@queries'
 
 interface UserContextProps {
@@ -31,5 +31,3 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     </UserContext.Provider>
   )
 }
-
-export const useUser = () => useContext(UserContext)

@@ -1,0 +1,2 @@
+schema: ./introspection.json
+documents: '**/*.graphql'

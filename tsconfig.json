@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "ES2022.Object","DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -14,6 +14,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Decorators */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -23,10 +27,11 @@
     /* Paths */
     "baseUrl": "src",
     "paths": {
+      "@assets": ["assets"],
       "@components": ["components"],
       "@pages": ["pages"],
       "@contexts": ["contexts"],
-      "@queries": ["queries"]
+      "@queries": ["queries"],
     }
   },
   "include": ["src"],

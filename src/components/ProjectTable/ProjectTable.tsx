@@ -1,112 +1,194 @@
-import { ActionIcon, Autocomplete, Table } from '@mantine/core'
-import { useEffect, useMemo, useState } from 'react'
-import { Loading } from '@components'
-import ObjectLoader, { SpeckleObject } from '@speckle/objectloader'
-import { SERVER_URL, useAuth } from '@contexts'
-import { IconPlus } from '@tabler/icons-react'
+import { useMemo } from 'react'
+import {
+  MantineReactTable,
+  MRT_Cell,
+  MRT_ColumnDef,
+  MRT_Row,
+  MRT_ShowHideColumnsButton,
+  MRT_TableInstance,
+  useMantineReactTable,
+} from 'mantine-react-table'
+import { SpeckleObject } from '@speckle/objectloader'
+import { useFetchSpeckle } from './useFetchSpeckle.ts'
+import { useParams } from 'react-router-dom'
+import { useGetLatestVersionQuery, useGetProjectNameQuery } from '@queries'
+import { download, generateCsv, mkConfig } from 'export-to-csv'
+import { IconDownload } from '@tabler/icons-react'
+import { Button } from '@mantine/core'
 
-interface ProjectTableProps {
-  projectId: string
-  objectId: string | null
-  loading: boolean
-}
+export const ProjectTable = () => {
+  const { projectId, modelId } = useParams()
 
-export const ProjectTable = (props: ProjectTableProps) => {
-  const { projectId, objectId, loading } = props
-  const { token } = useAuth()
-  const [objects, setObjects] = useState<SpeckleObject[]>([])
-  const [headerOptions, setHeaderOptions] = useState<Set<string>>(new Set())
-  const [headerValue, setHeaderValue] = useState('type')
-  const [headerValue2, setHeaderValue2] = useState('category')
-  const [selectedHeader, setSelectedHeader] = useState('type')
-  const [selectedHeader2, setSelectedHeader2] = useState('category')
+  const {
+    data: versionData,
+    loading: versionLoading,
+    error: versionError,
+  } = useGetLatestVersionQuery({
+    variables: { projectId: projectId!, modelId: modelId! },
+    skip: !projectId || !modelId,
+  })
+  const versionId = useMemo(() => versionData?.project?.model?.versions?.items?.[0]?.referencedObject, [versionData])
 
-  useEffect(() => {
-    // @ts-expect-error temporary implementation
-    const loadSpeckleObjects = async ({ token, projectId, objectId }) => {
-      const loader = new ObjectLoader({
-        serverUrl: SERVER_URL,
-        token,
-        streamId: projectId,
-        objectId,
-        options: { excludeProps: ['displayValue', 'displayMesh', 'renderMaterial'] },
-      })
-      const _objects = []
-      const _headers = headerOptions
-      for await (const obj of loader.getObjectIterator()) {
-        // @ts-expect-error temporary implementation
-        if (obj.speckle_type.startsWith('Objects.BuiltElements')) {
-          Object.keys(obj).forEach((key) => _headers.add(key))
-          if (obj.parameters) Object.keys(obj.parameters).forEach((key) => _headers.add(`parameters.${key}`))
-          _objects.push(obj)
-        }
+  const {
+    loading: speckleLoading,
+    error: speckleError,
+    data: speckleData,
+  } = useFetchSpeckle({
+    variables: {
+      projectId: projectId!,
+      versionId: versionId!,
+    },
+    skip: !projectId || !versionId,
+  })
+
+  const { data: projectData } = useGetProjectNameQuery({ variables: {projectId: projectId!}, skip: !projectId})
+
+  const getQuantity = ({ cell }: { cell: MRT_Cell<SpeckleObject> }) => {
+    const value = cell.getValue<{ value: number; units: string }>()
+
+    return (
+      <>
+        {value?.value?.toFixed(2)}
+        {value?.units}
+      </>
+    )
+  }
+
+  const columns = useMemo<MRT_ColumnDef<SpeckleObject>[]>(
+    () => [
+      {
+        accessorKey: 'id',
+        header: 'Id',
+        enableEditing: false,
+      },
+      {
+        accessorKey: 'category',
+        header: 'Category',
+        enableEditing: false,
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        enableEditing: false,
+      },
+      {
+        accessorKey: 'family',
+        header: 'Family',
+        enableEditing: false,
+      },
+      {
+        accessorKey: 'parameters.HOST_VOLUME_COMPUTED',
+        header: 'Volume',
+        enableEditing: false,
+        Cell: getQuantity,
+      },
+      {
+        accessorKey: 'parameters.HOST_AREA_COMPUTED',
+        header: 'Area',
+        enableEditing: false,
+        Cell: getQuantity,
+      },
+    ],
+    [],
+  )
+
+  const handleExportRows = (rows: MRT_Row<SpeckleObject>[], table: MRT_TableInstance<SpeckleObject>) => {
+    const rowData = rows.map((row) => row.original)
+    const visibleColumns = table.getVisibleFlatColumns().filter((column) => !column.id.startsWith('mrt'))
+
+    const getRowValue = (value: unknown) => {
+      if (value && typeof value === 'object') {
+        // @ts-expect-error TypeScript bug...
+        return value.value
       }
-      setHeaderOptions(_headers)
-      setObjects(_objects)
+      return value
     }
-    if (objectId) {
-      loadSpeckleObjects({ token, projectId, objectId })
-    }
-  }, [token, projectId, objectId, headerOptions])
 
-  const getRowValue = ({ row, headerValue }: { row: object; headerValue: string }) => {
-    const splittedHeader = headerValue.split('.')
-    let data = row
-    // @ts-expect-error temporary implementation
-    splittedHeader.forEach((header) => (data = data ? data[header] : null))
-    return data
+    const flattenRowData = rowData.map((row) =>
+      visibleColumns
+        // @ts-expect-error column.accessorFn works fine
+        .map((column) => ({ [column.columnDef.header as string]: getRowValue(column.accessorFn(row)) }))
+        .reduce((prev, next) => ({ ...prev, ...next }), {}),
+    )
+    const csvConfig = mkConfig({
+      fieldSeparator: ',',
+      decimalSeparator: '.',
+      useKeysAsHeaders: true,
+      filename: projectData?.project.name || 'generated'
+    })
+    const csv = generateCsv(csvConfig)(flattenRowData)
+    download(csvConfig)(csv)
   }
 
-  const rows = useMemo(
+  // @ts-expect-error issues with SpeckleObjects
+  const tableData: SpeckleObject[] = useMemo(
     () =>
-      objects?.map((row, index) => (
-        <Table.Tr key={index}>
-          {/*@ts-expect-error temporary implementation*/}
-          <Table.Td>{row.id}</Table.Td>
-          {/*@ts-expect-error temporary implementation*/}
-          <Table.Td>{getRowValue({ row, headerValue: selectedHeader })}</Table.Td>
-          {/*@ts-expect-error temporary implementation*/}
-          <Table.Td span={2}>{getRowValue({ row, headerValue: selectedHeader2 })}</Table.Td>
-        </Table.Tr>
-      )) || [],
-    [objects, selectedHeader, selectedHeader2],
+      speckleData?.elements
+        .map((category: SpeckleObject) => category?.elements || [])
+        // @ts-expect-error issues with SpeckleObjects
+        .reduce((prev: SpeckleObject[], next: SpeckleObject[]) => [...prev, ...next], []) || [],
+    [speckleData],
   )
 
-  if (loading) {
-    return <Loading />
-  }
+  const table = useMantineReactTable({
+    columns,
+    data: tableData,
+    createDisplayMode: 'row',
+    editDisplayMode: 'table',
+    enableEditing: true,
+    enableColumnActions: true,
+    enableColumnFilters: true,
+    enablePagination: true,
+    enableSorting: true,
+    enableGrouping: true,
+    paginationDisplayMode: 'pages',
+    enableGlobalFilter: false,
+    mantinePaperProps: {
+      shadow: undefined,
+    },
+    mantineToolbarAlertBannerProps:
+      speckleError || versionError
+        ? {
+            color: 'red',
+            children: speckleError || versionError?.message,
+          }
+        : undefined,
+    mantineTableProps: {
+      highlightOnHover: false,
+      striped: 'odd',
+      withColumnBorders: true,
+      withRowBorders: true,
+      withTableBorder: false,
+    },
+    renderToolbarInternalActions: ({ table }) => (
+      <>
+        <MRT_ShowHideColumnsButton table={table} />
+      </>
+    ),
+    renderTopToolbarCustomActions: ({ table }) => (
+      <Button
+        disabled={table.getPrePaginationRowModel().rows.length === 0}
+        //export all rows, including from the next pages, (still respects filtering and sorting)
 
-  return (
-    <>
-      <Table miw={800}>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>
-              <Autocomplete
-                data={Array.from(headerOptions)}
-                value={headerValue}
-                onChange={setHeaderValue}
-                onOptionSubmit={setSelectedHeader}
-              />
-            </Table.Th>
-            <Table.Th>
-              <Autocomplete
-                data={Array.from(headerOptions)}
-                value={headerValue2}
-                onChange={setHeaderValue2}
-                onOptionSubmit={setSelectedHeader2}
-              />
-            </Table.Th>
-            <Table.Th>
-              <ActionIcon variant='outline' color='black' radius='xl'>
-                <IconPlus />
-              </ActionIcon>
-            </Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>{rows}</Table.Tbody>
-      </Table>
-    </>
-  )
+        onClick={() => handleExportRows(table.getPrePaginationRowModel().rows, table)}
+        leftSection={<IconDownload />}
+        variant='filled'
+      >
+        Export All Rows
+      </Button>
+    ),
+    state: {
+      isLoading: speckleLoading || versionLoading,
+      showAlertBanner: !!speckleError || !!versionError,
+      showSkeletons: speckleLoading || versionLoading,
+    },
+    initialState: {
+      density: 'xs',
+      columnVisibility: {
+        id: false,
+      },
+    },
+  })
+
+  return <MantineReactTable table={table} />
 }

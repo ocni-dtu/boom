@@ -1,40 +1,22 @@
 import { useGetStreamsQuery } from '@queries'
-import { Container, Grid } from '@mantine/core'
-import { ErrorBoundary, ErrorMessage, Loading, ProjectCard } from '@components'
+import { Grid, useMatches } from '@mantine/core'
+import { ErrorBoundary, FetchBoundary, ProjectCard } from '@components'
 
 export const ProjectsPage = () => {
   const { loading, error, data } = useGetStreamsQuery()
 
-  if (loading) {
-    return (
-      <Container>
-        <Loading />
-      </Container>
-    )
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <ErrorMessage error={error} />
-      </Container>
-    )
-  }
-
+  const gridSpan = useMatches({ base: 12, sm: 6, md: 4, xl: 3 })
   return (
-    <Container>
+    <FetchBoundary error={error} loading={loading}>
       <Grid>
         {data?.activeUser?.projects?.items?.map((project, index) => (
-          <Grid.Col span={4} key={index}>
+          <Grid.Col span={gridSpan} key={index}>
             <ErrorBoundary>
-              <ProjectCard
-                // @ts-expect-error temporary implementation
-                project={project}
-              />
+              <ProjectCard project={project} />
             </ErrorBoundary>
           </Grid.Col>
         ))}
       </Grid>
-    </Container>
+    </FetchBoundary>
   )
 }
