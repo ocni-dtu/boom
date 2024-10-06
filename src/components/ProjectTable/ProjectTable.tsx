@@ -41,7 +41,7 @@ export const ProjectTable = () => {
     skip: !projectId || !versionId,
   })
 
-  const { data: projectData } = useGetProjectNameQuery({ variables: {projectId: projectId!}, skip: !projectId})
+  const { data: projectData } = useGetProjectNameQuery({ variables: { projectId: projectId! }, skip: !projectId })
 
   const getQuantity = ({ cell }: { cell: MRT_Cell<SpeckleObject> }) => {
     const value = cell.getValue<{ value: number; units: string }>()
@@ -114,7 +114,7 @@ export const ProjectTable = () => {
       fieldSeparator: ',',
       decimalSeparator: '.',
       useKeysAsHeaders: true,
-      filename: projectData?.project.name || 'generated'
+      filename: projectData?.project.name || 'generated',
     })
     const csv = generateCsv(csvConfig)(flattenRowData)
     download(csvConfig)(csv)
